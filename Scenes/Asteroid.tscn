@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://dgfx5imxt7pye"]
+
+[ext_resource type="Script" uid="uid://hblpdtecffy4" path="res://Scripts/Asteroid.cs" id="1_e0e3k"]
+[ext_resource type="PackedScene" uid="uid://bybn23gdbyq8" path="res://Scenes/StaticRock.tscn" id="2_lfwe0"]
+[ext_resource type="PackedScene" uid="uid://jmeuxgkb32tv" path="res://Scenes/RigidRock.tscn" id="3_3euil"]
+[ext_resource type="PackedScene" uid="uid://dy01j5jcrmwk1" path="res://Scenes/MultiMeshRock.tscn" id="4_j8gw4"]
+
+[node name="Asteroid" type="Node3D" unique_id=580769386 node_paths=PackedStringArray("_multiMeshRock")]
+script = ExtResource("1_e0e3k")
+_rigidRockScene = ExtResource("3_3euil")
+_staticRockScene = ExtResource("2_lfwe0")
+_multiMeshRock = NodePath("MultiMeshRock")
+
+[node name="MultiMeshRock" parent="." unique_id=1587479702 instance=ExtResource("4_j8gw4")]

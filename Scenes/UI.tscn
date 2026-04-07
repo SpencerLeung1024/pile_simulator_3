@@ -1,0 +1,42 @@
+[gd_scene format=3 uid="uid://d4ffxg8jdyitw"]
+
+[node name="UI" type="Control" unique_id=1472228808]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RichTextLabel" type="RichTextLabel" parent="." unique_id=1057721705]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 260.0
+offset_bottom = 562.0
+text = "FPS: 2
+(123.45, 234.56, 345.67)
+Real Distance: 50 m
+---
+MultiMesh: 123
+Static: 456
+Rigid: 789
+---
+Rock: 123
+Ice: 456
+Metal: 789"
+fit_content = true
+
+[node name="RealDistanceSlider" type="HSlider" parent="." unique_id=482351576]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -26.0
+offset_right = 260.0
+offset_bottom = -10.0
+grow_vertical = 0
+min_value = 10.0
+max_value = 200.0
+value = 50.0

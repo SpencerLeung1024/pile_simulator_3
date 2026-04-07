@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://dy01j5jcrmwk1"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vj41f"]
+vertex_color_use_as_albedo = true
+
+[sub_resource type="BoxMesh" id="BoxMesh_ejdq0"]
+material = SubResource("StandardMaterial3D_vj41f")
+
+[sub_resource type="MultiMesh" id="MultiMesh_tl4s2"]
+transform_format = 1
+use_colors = true
+mesh = SubResource("BoxMesh_ejdq0")
+
+[node name="MultiMeshRock" type="MultiMeshInstance3D" unique_id=1587479702]
+multimesh = SubResource("MultiMesh_tl4s2")

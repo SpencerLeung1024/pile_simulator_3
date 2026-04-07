@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://jmeuxgkb32tv"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_lpfm7"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_n6tc4"]
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_uac52"]
+
+[node name="RigidRock" type="RigidBody3D" unique_id=1205273218]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=354099619]
+mesh = SubResource("BoxMesh_lpfm7")
+surface_material_override/0 = SubResource("StandardMaterial3D_n6tc4")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=323795052]
+shape = SubResource("BoxShape3D_uac52")
