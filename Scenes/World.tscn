@@ -3,13 +3,13 @@
 [ext_resource type="Script" uid="uid://dbi7hprxycua7" path="res://Scripts/World.cs" id="1_5cjrv"]
 [ext_resource type="PackedScene" uid="uid://d4ffxg8jdyitw" path="res://Scenes/UI.tscn" id="2_5nsto"]
 [ext_resource type="PackedScene" uid="uid://dgfx5imxt7pye" path="res://Scenes/Asteroid.tscn" id="2_j0p05"]
-[ext_resource type="Script" uid="uid://c8yvxg3ulq3a" path="res://Scripts/FreeCamController.cs" id="4_freecam"]
+[ext_resource type="Script" uid="uid://dxkkjkuj2vlsd" path="res://Scripts/FreeCamController.cs" id="4_freecam"]
 
 [sub_resource type="Environment" id="Environment_o3h3i"]
 background_mode = 1
 ambient_light_source = 2
 ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_energy = 0.01
+ambient_light_energy = 0.05
 
 [node name="World" type="Node3D" unique_id=77073315 node_paths=PackedStringArray("_camera", "_asteroid")]
 script = ExtResource("1_5cjrv")
@@ -20,6 +20,8 @@ _asteroid = NodePath("Asteroid")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=771646409]
 environment = SubResource("Environment_o3h3i")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1949565711]
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1187229528]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1000)
