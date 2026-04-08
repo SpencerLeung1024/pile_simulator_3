@@ -1,7 +1,7 @@
 using Godot;
 using System;
 
-enum MaterialEnum
+public enum MaterialEnum
 {
 	Rock, // 0
 	Ice, // 1
