@@ -1,0 +1,27 @@
+# Pile Simulator 3
+
+This time, use an octree for procedural generation of the pristine asteroid and chunks for player modifications.
+
+I have removed Rubble Pile Simulator and Gridmap Pile Simulator to clean up the workspace and avoid conflicts. If you need information on how that was implemented you can ask me.
+
+## Project Info
+- Godot 4.7.dev3, Forward+, net8.0
+- Put scripts that are bound to a Godot node in Scripts
+- Put scripts that operate on underlying game data in DSA
+- The Godot scene tree should merely reflect the underlying game data
+
+## Steps
+
+### Step 1: Visualize handover between static rocks and far away octree nodes
+- The asteroid uses a seed and noise to generate the same bumpy shape and material distribution
+- 3 materials: rock, ice, and metal. There is more ice towards the surface and more metal towards the center
+- Put something in the code to cut the asteroid in half on the z=0 plane so I can see the cross-section
+- Add freecam controls to the world
+- Moving the camera makes the nearby region load
+- UI slider affects the radius where the asteroid is realized into static rocks with defined materials
+- Outside this radius, octree nodes are shown with the multi mesh. Color can be rock or some other uniform color
+- No rigid rocks, gravity, or player modifications yet
+
+### Step 2: Static modifications
+
+### Step 3: Rigid rocks

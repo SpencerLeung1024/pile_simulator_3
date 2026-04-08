@@ -9,7 +9,7 @@ public partial class Asteroid : Node3D
 	[Export] private MultiMeshInstance3D _multiMeshRock; // Far away approximations of octree nodes. Can be scaled freely. Supports vertex color. No collisions or raycasts
 
 	// Configuration
-	
+	[Export] private float _radius;
 	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
