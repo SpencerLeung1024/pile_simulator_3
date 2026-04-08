@@ -128,48 +128,78 @@ namespace DSA
 
             // Sample detail noise for fine variation
             float detail = _detailNoise.GetNoise3D(position.X, position.Y, position.Z);
+            
+            // Sample additional noise for material mixing (5% chance of other materials)
+            float mixNoise = _detailNoise.GetNoise3D(position.X * 0.1f, position.Y * 0.1f, position.Z * 0.1f);
 
-            // Material distribution based on depth
-            // Core (0.0 - 0.4): Mostly Metal with some Rock
-            // Mantle (0.4 - 0.8): Mixed Rock with Metal inclusions
-            // Surface (0.8 - 1.0): Rock with Ice (more ice closer to surface)
+            // Material distribution based on depth with 5% mixing of other materials
+            // Core: ~90% metal, 5% rock, 5% ice
+            // Mantle: Mixed rock with metal inclusions
+            // Surface: ~90% ice, 5% rock, 5% metal
 
             MaterialEnum material;
 
             if (adjustedDepth < 0.4f)
             {
-                // Core region
-                // Mostly Metal, some Rock
-                float metalThreshold = 0.3f - detail * 0.2f; // 0.1 to 0.5 range
-                
-                // Linear interpolation: at depth 0, threshold is lower (more metal)
-                // at depth 0.4, threshold is higher (more rock)
-                float t = adjustedDepth / 0.4f;
-                metalThreshold = Mathf.Lerp(0.1f, 0.5f, t);
-
-                material = (detail < metalThreshold) ? MaterialEnum.Metal : MaterialEnum.Rock;
+                // Core region - mostly metal
+                // Add 5% chance for other materials even at core
+                if (mixNoise > 0.90f)
+                {
+                    // 5% chance of ice even at core
+                    material = MaterialEnum.Ice;
+                }
+                else if (mixNoise > 0.75f)
+                {
+                    // 15% more rock at core (total ~20% rock)
+                    material = MaterialEnum.Rock;
+                }
+                else
+                {
+                    // ~75% metal at core
+                    float metalThreshold = 0.3f - detail * 0.2f;
+                    float t = adjustedDepth / 0.4f;
+                    metalThreshold = Mathf.Lerp(0.1f, 0.5f, t);
+                    material = (detail < metalThreshold) ? MaterialEnum.Metal : MaterialEnum.Rock;
+                }
             }
             else if (adjustedDepth < 0.8f)
             {
-                // Mantle region
-                // Mostly Rock with Metal inclusions
-                float metalThreshold = 0.8f - (adjustedDepth - 0.4f) * 0.75f; // Decreasing metal with depth
-                metalThreshold = Mathf.Clamp(metalThreshold, 0.05f, 0.4f);
-
-                material = (detail < metalThreshold) ? MaterialEnum.Metal : MaterialEnum.Rock;
+                // Mantle region - mostly rock with metal inclusions
+                // Add some random ice in mantle (rare)
+                if (mixNoise > 0.95f && adjustedDepth > 0.6f)
+                {
+                    material = MaterialEnum.Ice;
+                }
+                else
+                {
+                    float metalThreshold = 0.8f - (adjustedDepth - 0.4f) * 0.75f;
+                    metalThreshold = Mathf.Clamp(metalThreshold, 0.05f, 0.4f);
+                    material = (detail < metalThreshold) ? MaterialEnum.Metal : MaterialEnum.Rock;
+                }
             }
             else
             {
-                // Surface region
-                // Rock with increasing Ice towards surface
-                float iceStart = 0.8f;
-                float surfaceT = (adjustedDepth - iceStart) / (1.0f - iceStart); // 0 at 0.8, 1 at surface
-                
-                // More ice closer to surface
-                float iceThreshold = surfaceT * 0.7f + 0.1f; // 0.1 at 0.8, 0.8 at surface
-                iceThreshold += detail * 0.15f; // Add variation
-
-                material = (detail < iceThreshold) ? MaterialEnum.Ice : MaterialEnum.Rock;
+                // Surface region - mostly ice
+                // Add 5% chance for other materials at surface
+                if (mixNoise > 0.90f)
+                {
+                    // 5% chance of metal even at surface
+                    material = MaterialEnum.Metal;
+                }
+                else if (mixNoise > 0.80f)
+                {
+                    // 10% more rock at surface (total ~15-20% rock)
+                    material = MaterialEnum.Rock;
+                }
+                else
+                {
+                    // ~75-80% ice at surface
+                    float iceStart = 0.8f;
+                    float surfaceT = (adjustedDepth - iceStart) / (1.0f - iceStart);
+                    float iceThreshold = surfaceT * 0.7f + 0.1f;
+                    iceThreshold += detail * 0.15f;
+                    material = (detail < iceThreshold) ? MaterialEnum.Ice : MaterialEnum.Rock;
+                }
             }
 
             return material;

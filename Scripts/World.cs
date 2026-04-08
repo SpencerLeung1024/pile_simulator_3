@@ -11,6 +11,9 @@ public partial class World : Node3D
 	private HSlider _realDistanceSlider;
 	private Label _sliderLabel;
 	private CheckButton _crossSectionCheck;
+	private HSlider _maxStaticRocksSlider;
+	private Label _maxRocksLabel;
+	private CheckButton _neighborCullingCheck;
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -22,8 +25,11 @@ public partial class World : Node3D
 			_realDistanceSlider = ui.GetNodeOrNull<HSlider>("RealDistanceSlider");
 			_sliderLabel = ui.GetNodeOrNull<Label>("SliderLabel");
 			_crossSectionCheck = ui.GetNodeOrNull<CheckButton>("CrossSectionCheck");
+			_maxStaticRocksSlider = ui.GetNodeOrNull<HSlider>("MaxStaticRocksSlider");
+			_maxRocksLabel = ui.GetNodeOrNull<Label>("MaxRocksLabel");
+			_neighborCullingCheck = ui.GetNodeOrNull<CheckButton>("NeighborCullingCheck");
 
-			// Connect slider
+			// Connect realization radius slider
 			if (_realDistanceSlider != null)
 			{
 				_realDistanceSlider.ValueChanged += OnRealDistanceSliderChanged;
@@ -34,6 +40,19 @@ public partial class World : Node3D
 			if (_crossSectionCheck != null)
 			{
 				_crossSectionCheck.Toggled += OnCrossSectionToggled;
+			}
+
+			// Connect max static rocks slider
+			if (_maxStaticRocksSlider != null)
+			{
+				_maxStaticRocksSlider.ValueChanged += OnMaxStaticRocksSliderChanged;
+				UpdateMaxRocksLabel(_maxStaticRocksSlider.Value);
+			}
+
+			// Connect neighbor culling toggle
+			if (_neighborCullingCheck != null)
+			{
+				_neighborCullingCheck.Toggled += OnNeighborCullingToggled;
 			}
 		}
 	}
@@ -62,6 +81,33 @@ public partial class World : Node3D
 			_asteroid.SetCrossSectionCut(enabled);
 		}
 		GD.Print($"Cross-section cut: {(enabled ? "enabled" : "disabled")}");
+	}
+
+	private void OnMaxStaticRocksSliderChanged(double value)
+	{
+		if (_asteroid != null)
+		{
+			// Note: The asteroid script handles this via direct UI connection,
+			// but we update the label here
+		}
+		UpdateMaxRocksLabel(value);
+	}
+
+	private void UpdateMaxRocksLabel(double value)
+	{
+		if (_maxRocksLabel != null)
+		{
+			_maxRocksLabel.Text = $"Max Static Rocks: {value:F0}";
+		}
+	}
+
+	private void OnNeighborCullingToggled(bool enabled)
+	{
+		if (_asteroid != null)
+		{
+			// Note: The asteroid script handles this via direct UI connection
+		}
+		GD.Print($"Neighbor culling: {(enabled ? "enabled" : "disabled")}");
 	}
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.

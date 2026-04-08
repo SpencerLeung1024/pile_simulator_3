@@ -64,3 +64,41 @@ offset_right = 260.0
 offset_bottom = -74.0
 grow_vertical = 0
 text = "Show Cross-Section (Z=0)"
+
+[node name="NeighborCullingCheck" type="CheckButton" parent="." unique_id=1111111111]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -130.0
+offset_right = 260.0
+offset_bottom = -104.0
+grow_vertical = 0
+text = "Neighbor Culling (Interior)"
+
+[node name="MaxStaticRocksSlider" type="HSlider" parent="." unique_id=2222222222]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -180.0
+offset_right = 260.0
+offset_bottom = -164.0
+grow_vertical = 0
+min_value = 1000.0
+max_value = 100000.0
+value = 10000.0
+
+[node name="MaxRocksLabel" type="Label" parent="." unique_id=3333333333]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -200.0
+offset_right = 260.0
+offset_bottom = -184.0
+grow_vertical = 0
+text = "Max Static Rocks: 10000"

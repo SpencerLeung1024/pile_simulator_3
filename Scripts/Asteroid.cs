@@ -15,15 +15,19 @@ public partial class Asteroid : Node3D
     [Export] private ulong _seed = 12345;
     [Export] private int _maxDepth = 8;
     [Export] private bool _enableCrossSectionCut = false;
-    [Export] private int _maxStaticRocks = 2000;
+    [Export] private int _maxStaticRocks = 10000;
     [Export] private float _cameraMoveThreshold = 10f; // Minimum camera movement to trigger update
+    [Export] private float _thetaThreshold = 0.5f; // Barnes-Hut theta threshold for LOD
 
     // Internal state
     private VoxelOctree _octree;
     private float _realizationRadius = 50f; // Controlled by UI slider
     private Camera3D _camera;
     private HSlider _realDistanceSlider;
+    private HSlider _maxStaticRocksSlider;
+    private CheckButton _neighborCullingCheck;
     private RichTextLabel _debugLabel;
+    private bool _neighborCullingEnabled = false;
 
     // Near zone: StaticBody3D rocks (inside realizationRadius)
     private Dictionary<Vector3I, Node3D> _staticRocks = new();
@@ -58,12 +62,26 @@ public partial class Asteroid : Node3D
         if (ui != null)
         {
             _realDistanceSlider = ui.GetNodeOrNull<HSlider>("RealDistanceSlider");
+            _maxStaticRocksSlider = ui.GetNodeOrNull<HSlider>("MaxStaticRocksSlider");
+            _neighborCullingCheck = ui.GetNodeOrNull<CheckButton>("NeighborCullingCheck");
             _debugLabel = ui.GetNodeOrNull<RichTextLabel>("RichTextLabel");
 
             if (_realDistanceSlider != null)
             {
                 _realizationRadius = (float)_realDistanceSlider.Value;
                 _realDistanceSlider.ValueChanged += OnRealDistanceSliderChanged;
+            }
+
+            if (_maxStaticRocksSlider != null)
+            {
+                _maxStaticRocks = (int)_maxStaticRocksSlider.Value;
+                _maxStaticRocksSlider.ValueChanged += OnMaxStaticRocksSliderChanged;
+            }
+
+            if (_neighborCullingCheck != null)
+            {
+                _neighborCullingEnabled = _neighborCullingCheck.ButtonPressed;
+                _neighborCullingCheck.Toggled += OnNeighborCullingToggled;
             }
         }
 
@@ -100,9 +118,23 @@ public partial class Asteroid : Node3D
         UpdateLOD();
     }
 
+    private void OnMaxStaticRocksSliderChanged(double value)
+    {
+        _maxStaticRocks = (int)value;
+        _needsMultiMeshUpdate = true;
+        UpdateLOD();
+    }
+
+    private void OnNeighborCullingToggled(bool enabled)
+    {
+        _neighborCullingEnabled = enabled;
+        _needsMultiMeshUpdate = true;
+        UpdateLOD();
+    }
+
     /// <summary>
-    /// Main LOD update logic. Determines which nodes are inside/outside realization radius
-    /// and updates the visualization accordingly.
+    /// Main LOD update logic using Barnes-Hut style theta-based approximation.
+    /// Uses GetVisibleNodes which renders larger blocks for distant areas (O(log d) instead of O(d²)).
     /// </summary>
     private void UpdateLOD()
     {
@@ -110,17 +142,24 @@ public partial class Asteroid : Node3D
 
         Vector3 cameraPos = _camera.GlobalPosition;
 
-        // Get all leaf nodes
-        List<OctreeNode> allLeaves = _octree.GetAllLeaves();
+        // Get visible nodes using Barnes-Hut style approximation
+        // This returns larger nodes for distant areas, smaller nodes for close areas
+        List<OctreeNode> visibleNodes = _octree.GetVisibleNodes(cameraPos, _thetaThreshold);
 
-        // Separate nodes into near and far zones
+        // Separate nodes into near and far zones based on realization radius
         List<OctreeNode> nearNodes = new();
         _farNodes.Clear();
 
-        foreach (var node in allLeaves)
+        foreach (var node in visibleNodes)
         {
             // Skip nodes that don't have material (empty)
             if (!node.Material.HasValue) continue;
+
+            // Apply neighbor culling if enabled - skip nodes with all solid neighbors
+            if (_neighborCullingEnabled && _octree.HasAllSolidNeighbors(node))
+            {
+                continue;
+            }
 
             float distanceToCamera = node.Center.DistanceTo(cameraPos);
 
@@ -322,8 +361,9 @@ public partial class Asteroid : Node3D
 
         text += "---\n";
         text += $"MultiMesh: {_multiMeshCount}\n";
-        text += $"Static: {_staticRockCount}\n";
+        text += $"Static: {_staticRockCount} / {_maxStaticRocks}\n";
         text += $"Rigid: 0\n";
+        text += $"Culling: {(_neighborCullingEnabled ? "ON" : "OFF")}\n";
         text += "---\n";
 
         // Count materials in near nodes

@@ -179,9 +179,29 @@ public partial class FreeCamController : Camera3D
 	{
 		Vector3 velocity = Vector3.Zero;
 
-		// Get input directions
-		float forward = Input.GetActionStrength("ui_down") - Input.GetActionStrength("ui_up"); // W/S
-		float right = Input.GetActionStrength("ui_right") - Input.GetActionStrength("ui_left"); // D/A
+		// Get input directions using WASD keys
+		float forward = 0.0f;
+		float right = 0.0f;
+
+		// W/S for forward/backward
+		if (Input.IsKeyPressed(Key.W))
+		{
+			forward += 1.0f;
+		}
+		if (Input.IsKeyPressed(Key.S))
+		{
+			forward -= 1.0f;
+		}
+
+		// A/D for left/right
+		if (Input.IsKeyPressed(Key.D))
+		{
+			right += 1.0f;
+		}
+		if (Input.IsKeyPressed(Key.A))
+		{
+			right -= 1.0f;
+		}
 
 		// Q/E for vertical movement
 		float up = 0.0f;

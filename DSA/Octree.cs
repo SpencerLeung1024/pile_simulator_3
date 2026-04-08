@@ -559,5 +559,112 @@ namespace DSA
                 CollectAllLeaves(child, leaves);
             }
         }
+
+        /// <summary>
+        /// Gets visible nodes using Barnes-Hut style theta-based approximation.
+        /// Uses theta = node_size / distance_to_camera.
+        /// If theta < threshold, the node is rendered even if not a leaf (larger blocks for distant areas).
+        /// This scales as O(log d) instead of O(d²).
+        /// </summary>
+        public List<OctreeNode> GetVisibleNodes(Vector3 cameraPos, float thetaThreshold)
+        {
+            List<OctreeNode> nodes = new List<OctreeNode>();
+            CollectVisibleNodes(_root, cameraPos, thetaThreshold, nodes);
+            return nodes;
+        }
+
+        /// <summary>
+        /// Recursively collects visible nodes using Barnes-Hut approximation.
+        /// </summary>
+        private void CollectVisibleNodes(OctreeNode node, Vector3 cameraPos, float thetaThreshold, List<OctreeNode> nodes)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            // Check cross-section cut - skip nodes entirely above z=0 plane
+            if (_enableCrossSectionCut && node.Center.Z > 0)
+            {
+                float halfSize = node.Size / 2;
+                if (node.Center.Z - halfSize > 0)
+                {
+                    return;
+                }
+            }
+
+            // Skip empty leaf nodes
+            if (node.IsLeaf && !node.Material.HasValue)
+            {
+                return;
+            }
+
+            // Calculate distance from camera to node center
+            float distance = node.Center.DistanceTo(cameraPos);
+
+            // Avoid division by zero - treat very close nodes as always visible
+            if (distance < 0.001f)
+            {
+                distance = 0.001f;
+            }
+
+            // Calculate theta = node_size / distance
+            float theta = node.Size / distance;
+
+            // If theta < threshold, this node is small enough to be an approximation
+            // OR if it's a leaf, we must render it at this detail level
+            if (theta < thetaThreshold || node.IsLeaf)
+            {
+                nodes.Add(node);
+                return;
+            }
+
+            // Node is too large at this distance - recurse into children for finer detail
+            foreach (var child in node.Children)
+            {
+                CollectVisibleNodes(child, cameraPos, thetaThreshold, nodes);
+            }
+        }
+
+        /// <summary>
+        /// Checks if a node has all 6 solid neighbors (completely surrounded).
+        /// Used for interior culling - nodes with all solid neighbors don't need to be rendered.
+        /// </summary>
+        public bool HasAllSolidNeighbors(OctreeNode node)
+        {
+            if (node == null || !node.Material.HasValue)
+            {
+                return false;
+            }
+
+            float halfSize = node.Size / 2;
+
+            // Check 6 cardinal directions
+            Vector3[] neighborOffsets = new Vector3[]
+            {
+                new Vector3(node.Size, 0, 0),      // +X
+                new Vector3(-node.Size, 0, 0),     // -X
+                new Vector3(0, node.Size, 0),      // +Y
+                new Vector3(0, -node.Size, 0),     // -Y
+                new Vector3(0, 0, node.Size),      // +Z
+                new Vector3(0, 0, -node.Size)      // -Z
+            };
+
+            foreach (var offset in neighborOffsets)
+            {
+                Vector3 neighborPos = node.Center + offset;
+                
+                // Sample the octree at the neighbor position
+                MaterialEnum? neighborMaterial = Sample(neighborPos);
+                
+                // If neighbor is empty, this node is not fully surrounded
+                if (!neighborMaterial.HasValue)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
     }
 }
