@@ -39,6 +39,26 @@ public class OctreeNode
         return new Aabb(Center - halfSize, halfSize * 2);
     }
 
+    // Returns true if this node's bounding box is completely outside the given radius
+    // Used for conservative empty-space culling
+    public bool IsOutsideRadius(float radius)
+    {
+        // Find the closest point in the node's AABB to the origin
+        Vector3 halfSize = new Vector3(Size / 2, Size / 2, Size / 2);
+        Vector3 min = Center - halfSize;
+        Vector3 max = Center + halfSize;
+        
+        // Closest point on AABB to origin
+        Vector3 closest = new Vector3(
+            Mathf.Clamp(0, min.X, max.X),
+            Mathf.Clamp(0, min.Y, max.Y),
+            Mathf.Clamp(0, min.Z, max.Z)
+        );
+        
+        // If closest point is outside radius, entire AABB is outside
+        return closest.Length() > radius;
+    }
+
     public bool Intersects(Aabb bounds)
     {
         return GetBounds().Intersects(bounds);
@@ -213,6 +233,14 @@ public class Octree
             }
             else // Case 2: We need to explore children
             {
+                // OPTIMIZATION: Skip nodes that are completely outside the asteroid's max radius
+                // Since asteroid is a heightfield (no caves), if the entire node bounds are outside MaxRadius,
+                // all descendants will be empty
+                if (node.IsOutsideRadius(Generator.MaxRadius))
+                {
+                    continue; // Entire node volume is outside asteroid - skip
+                }
+
                 if (node.IsRealVoxel) // Case 2a: This is a leaf node and is a real voxel. There are no children to explore, so we have to use this node even though it's close
                 {
                     if (node.Material != MaterialEnum.Empty)
@@ -270,6 +298,16 @@ public class Octree
         // 128 x 128 x 128 = 2097152
         // = 2396745
 
+        // At the initial spawn point 1000 m away
+        /*
+        Visited 585 nodes
+        Called GetNeighbors 8 times
+        neighbors 0, 0, 0, 8, 0, 0, 0
+        Neighbor cache has 32 entries
+        Returned 8 nodes
+        */
+
+        // About 45 m from the surface
         /*
         Visited 2015905 nodes
         Called GetNeighbors 34534 times
