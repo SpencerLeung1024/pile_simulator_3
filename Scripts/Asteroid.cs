@@ -10,7 +10,7 @@ public partial class Asteroid : Node3D
     [Export] private MultiMeshInstance3D _multiMeshRock; // Far away approximations of octree nodes
 
     // Configuration
-    [Export] private float _radius = 20f;
+    [Export] private float _radius = 500f;
     [Export] private ulong _seed = 12345;
     //[Export] private int _maxDepth = 8;
     [Export] private bool _enableCrossSectionCut = false;

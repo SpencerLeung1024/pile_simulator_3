@@ -285,40 +285,26 @@ public class Octree
         GD.Print($"Neighbor cache has {neighborCache.Count} entries");
         GD.Print($"Returned {result.Count} nodes");
 
-        // A 20 m radius asteroid (really tiny for testing)
-        // 20 m radius + 0.8 * 20 m = 16 m max height = 36 m max radius = 72 m diameter = 128 m root node = height 7 = 8 layers
-        // Worst case octree should be:
-        // 1 x 1 x 1 = 1
-        // 2 x 2 x 2 = 8
-        // 4 x 4 x 4 = 64
-        // 8 x 8 x 8 = 512
-        // 16 x 16 x 16 = 4096
-        // 32 x 32 x 32 = 32768
-        // 64 x 64 x 64 = 262144
-        // 128 x 128 x 128 = 2097152
-        // = 2396745
+        // 500 m radius asteroid
+        // 500 m + (0.8 * 500 m) = 900 m max radius = 2048 m root = height 11 root
 
         // At the initial spawn point 1000 m away
         /*
-        Visited 585 nodes
-        Called GetNeighbors 8 times
-        neighbors 0, 0, 0, 8, 0, 0, 0
-        Neighbor cache has 32 entries
-        Returned 8 nodes
+        Visited 3632201 nodes
+        Called GetNeighbors 269603 times
+        neighbors 0, 30, 264, 4224, 5292, 7449, 252344
+        Neighbor cache has 298890 entries
+        Returned 17259 nodes
         */
 
         // About 45 m from the surface
         /*
-        Visited 2015905 nodes
-        Called GetNeighbors 34534 times
-        neighbors 0, 11, 69, 1146, 1279, 1803, 30226
-        Neighbor cache has 39167 entries
-        Returned 4308 nodes
+        Visited 16163489 nodes
+        Called GetNeighbors 3470369 times
+        neighbors 0, 52, 448, 17017, 21658, 45481, 3385713
+        Neighbor cache has 3709953 entries
+        Returned 84656 nodes
         */
-
-        // neighbors 1..5 = 4308, and neighbors 1..6 = 34534 as expected
-        // There are 34534 solid nodes at this level of detail of which 4308 are on the surface
-        // We are visiting an enormous quantity (~84%) of the octree and the empty nodes in the worst case
 
         return result;
     }
