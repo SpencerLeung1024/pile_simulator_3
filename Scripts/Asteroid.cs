@@ -257,6 +257,8 @@ public partial class Asteroid : Node3D
     {
         if (_multiMeshRock == null || _multiMeshRock.Multimesh == null) return;
 
+        _needsMultiMeshUpdate = false;
+
         // We need to filter out nodes here so that indices don't get messed up
         if (_enableCrossSectionCut)
         {
