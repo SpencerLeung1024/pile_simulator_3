@@ -151,7 +151,7 @@ public partial class Asteroid : Node3D
         Vector3 cameraPos = _camera.GlobalPosition;
         float thetaThreshold = 1.0f / _realizationRadius; // I want a 1 voxel to be rendered 50 m away -> 1 / 50 = 0.02
 
-        List<OctreeNode> visibleNodes = _octree.QueryForLOD(cameraPos, thetaThreshold);
+        List<OctreeNode> visibleNodes = _octree.QueryForLOD(cameraPos, thetaThreshold, _neighborCullingEnabled);
 
         _nearNodes.Clear();
         _farNodes.Clear();
@@ -199,6 +199,8 @@ public partial class Asteroid : Node3D
         // Spawn or update rocks for near nodes
         foreach (var node in _nearNodes)
         {
+            if (node.Center.Z > 0.0f && _enableCrossSectionCut) continue; // Skip the closer half of nodes if cross-section cut is enabled
+
             Vector3I key = new Vector3I(
                 Mathf.RoundToInt(node.Center.X * 1000),
                 Mathf.RoundToInt(node.Center.Y * 1000),
@@ -254,6 +256,12 @@ public partial class Asteroid : Node3D
     private void UpdateMultiMesh()
     {
         if (_multiMeshRock == null || _multiMeshRock.Multimesh == null) return;
+
+        // We need to filter out nodes here so that indices don't get messed up
+        if (_enableCrossSectionCut)
+        {
+            _farNodes.RemoveAll(node => node.Center.Z > 0.0f);
+        }
 
         int count = _farNodes.Count;
         _multiMeshRock.Multimesh.InstanceCount = count;

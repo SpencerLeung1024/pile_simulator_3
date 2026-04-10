@@ -28,3 +28,4 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1000)
 script = ExtResource("4_freecam")
 
 [node name="Asteroid" parent="." unique_id=580769386 instance=ExtResource("2_j0p05")]
+_radius = 20.0
