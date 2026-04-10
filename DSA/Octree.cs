@@ -17,6 +17,11 @@ public class OctreeNode
     }
     public OctreeNode[] Children; // May be null and realized on demand to answer a query
     public MaterialEnum Material; // Empty = -1 so treat -1 as the nothing state
+    public bool MayHaveSolidDescendants; // Set when realized. Can be false if Material is not Empty or the bounding box lies inside the asteroid's max radius
+    public byte ExposedFaces; // [_, _, +z, +y, +x, -z, -y, -x]. Can do == 0 to check if this is unreachable from the outside
+    // This is probably gonna result in a mishap in the future but:
+    // 0xff [11111111] is a special value meaning "not yet determined"
+    // The culling check uses it to fill in the ExposedFaces field so it doesn't have to do expensive GetNeighbors calls in the future
     public bool IsRealVoxel // An internal node can have a non-empty material (shown as a far away approximation) but the internal node shouldn't be used in gameplay calculations
     {
         get
@@ -25,12 +30,14 @@ public class OctreeNode
         }
     }
 
-    public OctreeNode(Vector3 center, int height, MaterialEnum material)
+    public OctreeNode(Vector3 center, int height, MaterialEnum material, bool mayHaveSolidDescendants, byte exposedFaces)
     {
         Center = center;
         Height = height;
         Children = null;
         Material = material;
+        MayHaveSolidDescendants = mayHaveSolidDescendants;
+        ExposedFaces = exposedFaces;
     }
 
     public Aabb GetBounds()
@@ -102,7 +109,7 @@ public class Octree
         Generator = generator;
         int rootHeight = (int) MathF.Ceiling(MathF.Log2(Generator.MaxRadius * 2)); // Ensure the root node can encompass the entire asteroid
         MaterialEnum rootMaterial = Generator.Sample(Vector3.Zero); // Sample the center of the asteroid to determine root material
-        Root = new OctreeNode(Vector3.Zero, rootHeight, rootMaterial);
+        Root = new OctreeNode(Vector3.Zero, rootHeight, rootMaterial, true, 0x3f); // The root encompasses the entire asteroid and faces space, so all faces are exposed
     }
 
     private void RealizeChildren(OctreeNode node)
@@ -114,7 +121,10 @@ public class Octree
         for (int i = 0; i < 8; i++)
         {
             MaterialEnum childMaterial = Generator.Sample(childCenters[i]);
-            node.Children[i] = new OctreeNode(childCenters[i], node.Height - 1, childMaterial);
+            OctreeNode child = new OctreeNode(childCenters[i], node.Height - 1, childMaterial, true, 0xff); // may have solid descendants, whether it is exposed is unknown right now
+            bool mayHaveSolidDescendants = (childMaterial != MaterialEnum.Empty) || !child.IsOutsideRadius(Generator.MaxRadius);
+            child.MayHaveSolidDescendants = mayHaveSolidDescendants; // We need the child to exist so we can call child.IsOutsideRadius
+            node.Children[i] = child;
         }
     }
 
@@ -142,6 +152,7 @@ public class Octree
         return currentNode;
     }
 
+    /*
     // Gets 6 neighbors: [-x, -y, -z, +x, +y, +z].
     // Has a really messy path for accepting a cache to hopefully speed up rendering
     // No node has the same center as any other node. Children of a layer have centers offset by a quarter of the parent's size. They form a lattice half the size and offset a quarter compared to the parent lattice
@@ -187,6 +198,41 @@ public class Octree
         }
         return count;
     }
+    */
+
+    // Supersedes the previous weird mechanism
+    // This stores the result in the node's ExposedFaces field
+    public byte GetExposedFaces(OctreeNode node)
+    {
+        if (node.ExposedFaces != 0xff) // Special value meaning "not yet determined"
+        {
+            return node.ExposedFaces;
+        }
+        else
+        {
+            // Otherwise calculate it
+            byte exposedFaces = 0;
+            Vector3[] queryPoints = new Vector3[]
+            {
+                node.Center + new Vector3(-node.Size, 0, 0), // -x
+                node.Center + new Vector3(0, -node.Size, 0), // -y
+                node.Center + new Vector3(0, 0, -node.Size), // -z
+                node.Center + new Vector3(node.Size, 0, 0), // +x
+                node.Center + new Vector3(0, node.Size, 0), // +y
+                node.Center + new Vector3(0, 0, node.Size) // +z
+            };
+            for (int i = 0; i < 6; i++)
+            {
+                OctreeNode neighbor = Query(queryPoints[i], node.Height);
+                if (neighbor == null || neighbor.Material == MaterialEnum.Empty)
+                {
+                    exposedFaces |= (byte)(1 << i); // This face is exposed to space
+                }
+            }
+            node.ExposedFaces = exposedFaces;
+            return exposedFaces;
+        }
+    }
 
     // Similar to Barnes-Hut approximation for gravity
     // Returns a list of nodes (possibly leaf, possibly internal) where farther nodes are larger
@@ -194,11 +240,12 @@ public class Octree
     {
         Stack<OctreeNode> stack = new Stack<OctreeNode>();
         List<OctreeNode> result = new List<OctreeNode>();
-        Dictionary<Vector3, OctreeNode> neighborCache = new Dictionary<Vector3, OctreeNode>();
+        //Dictionary<Vector3, OctreeNode> neighborCache = new Dictionary<Vector3, OctreeNode>();
         
         int nodesVisited = 0;
-        int GetNeighborCalls = 0;
-        int[] debugCount = new int[7];
+        //int GetNeighborCalls = 0;
+        int GetExposedFacesCalls = 0;
+        //int[] debugCount = new int[7];
         
         stack.Push(Root);
 
@@ -208,6 +255,11 @@ public class Octree
 
             nodesVisited++;
 
+            if (!node.MayHaveSolidDescendants)
+            {
+                continue; // Entire node volume is outside asteroid - skip
+            }
+
             float nodeTheta = node.Size / queryPos.DistanceTo(node.Center);
             if (nodeTheta < theta) // Case 1: This node is far enough away to approximate itself
             {
@@ -216,6 +268,7 @@ public class Octree
                     bool passedNeighborCheck = true;
                     if (neighborCulling)
                     {
+                        /*
                         GetNeighborCalls++;
                         OctreeNode[] neighbors = GetNeighbors(node, neighborCache);
                         int nonEmptyNeighbors = NonEmpty(neighbors);
@@ -224,6 +277,10 @@ public class Octree
                         {
                             passedNeighborCheck = false; // All neighbors are solid
                         }
+                        */
+                        GetExposedFacesCalls++;
+                        byte exposedFaces = GetExposedFaces(node);
+                        passedNeighborCheck = exposedFaces != 0;
                     }
                     if (passedNeighborCheck)
                     {
@@ -233,14 +290,6 @@ public class Octree
             }
             else // Case 2: We need to explore children
             {
-                // OPTIMIZATION: Skip nodes that are completely outside the asteroid's max radius
-                // Since asteroid is a heightfield (no caves), if the entire node bounds are outside MaxRadius,
-                // all descendants will be empty
-                if (node.IsOutsideRadius(Generator.MaxRadius))
-                {
-                    continue; // Entire node volume is outside asteroid - skip
-                }
-
                 if (node.IsRealVoxel) // Case 2a: This is a leaf node and is a real voxel. There are no children to explore, so we have to use this node even though it's close
                 {
                     if (node.Material != MaterialEnum.Empty)
@@ -248,6 +297,7 @@ public class Octree
                         bool passedNeighborCheck = true;
                         if (neighborCulling)
                         {
+                            /*
                             GetNeighborCalls++;
                             OctreeNode[] neighbors = GetNeighbors(node, neighborCache);
                             int nonEmptyNeighbors = NonEmpty(neighbors);
@@ -256,6 +306,10 @@ public class Octree
                             {
                                 passedNeighborCheck = false; // All neighbors are solid
                             }
+                            */
+                            GetExposedFacesCalls++;
+                            byte exposedFaces = GetExposedFaces(node);
+                            passedNeighborCheck = exposedFaces != 0;
                         }
                         if (passedNeighborCheck)
                         {
@@ -280,9 +334,10 @@ public class Octree
         }
 
         GD.Print($"Visited {nodesVisited} nodes");
-        GD.Print($"Called GetNeighbors {GetNeighborCalls} times");
-        GD.Print($"neighbors {string.Join(", ", debugCount)}");
-        GD.Print($"Neighbor cache has {neighborCache.Count} entries");
+        GD.Print($"Called GetExposedFaces {GetExposedFacesCalls} times");
+        //GD.Print($"Called GetNeighbors {GetNeighborCalls} times");
+        //GD.Print($"neighbors {string.Join(", ", debugCount)}");
+        //GD.Print($"Neighbor cache has {neighborCache.Count} entries");
         GD.Print($"Returned {result.Count} nodes");
 
         // 500 m radius asteroid
