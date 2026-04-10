@@ -3,12 +3,13 @@ using System;
 
 public enum MaterialEnum
 {
-	Rock, // 0
+    Empty = (int) GridMap.InvalidCellItem, // -1
+    Rock, // 0
 	Ice, // 1
 	Metal // 2
 }
 
-class Materials
+public class Materials
 {
     public static Color[] materialColors = new Color[]
     {
