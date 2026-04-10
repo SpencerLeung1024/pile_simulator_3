@@ -1,7 +1,6 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using DSA;
 
 public partial class Asteroid : Node3D
 {
@@ -13,14 +12,15 @@ public partial class Asteroid : Node3D
     // Configuration
     [Export] private float _radius = 100f;
     [Export] private ulong _seed = 12345;
-    [Export] private int _maxDepth = 8;
+    //[Export] private int _maxDepth = 8;
     [Export] private bool _enableCrossSectionCut = false;
     [Export] private int _maxStaticRocks = 10000;
     [Export] private float _cameraMoveThreshold = 10f; // Minimum camera movement to trigger update
     [Export] private float _thetaThreshold = 0.5f; // Barnes-Hut theta threshold for LOD
 
     // Internal state
-    private VoxelOctree _octree;
+    private Octree _octree;
+    private AsteroidGenerator _generator;
     private float _realizationRadius = 50f; // Controlled by UI slider
     private Camera3D _camera;
     private HSlider _realDistanceSlider;
@@ -30,6 +30,7 @@ public partial class Asteroid : Node3D
     private bool _neighborCullingEnabled = false;
 
     // Near zone: StaticBody3D rocks (inside realizationRadius)
+    private List<OctreeNode> _nearNodes = new();
     private Dictionary<Vector3I, Node3D> _staticRocks = new();
     private Queue<Node3D> _staticRockPool = new();
 
@@ -46,9 +47,14 @@ public partial class Asteroid : Node3D
 
     public override void _Ready()
     {
+        float bulkDensity = 2.5f;
+        float idealVolume = (4.0f / 3.0f) * Mathf.Pi * Mathf.Pow(_radius, 3);
+        float gravitationalMass = bulkDensity * idealVolume;
+        float maxHeight = _radius * 0.2f;
+        // Initialize asteroid generator
+        _generator = new AsteroidGenerator(_seed, _radius, gravitationalMass, maxHeight);
         // Initialize the octree with procedural generation
-        _octree = new VoxelOctree(_seed, _radius, _maxDepth, _enableCrossSectionCut);
-        GD.Print($"Asteroid octree initialized with {_octree.GetLeafCount()} leaf nodes");
+        _octree = new Octree(_generator);
 
         // Get camera reference from parent (World)
         Node parent = GetParent();
@@ -142,30 +148,18 @@ public partial class Asteroid : Node3D
 
         Vector3 cameraPos = _camera.GlobalPosition;
 
-        // Get visible nodes using Barnes-Hut style approximation
-        // This returns larger nodes for distant areas, smaller nodes for close areas
-        List<OctreeNode> visibleNodes = _octree.GetVisibleNodes(cameraPos, _thetaThreshold);
+        List<OctreeNode> visibleNodes = _octree.QueryForLOD(cameraPos, _thetaThreshold);
 
-        // Separate nodes into near and far zones based on realization radius
-        List<OctreeNode> nearNodes = new();
+        _nearNodes.Clear();
         _farNodes.Clear();
 
-        foreach (var node in visibleNodes)
+        foreach (OctreeNode node in visibleNodes)
         {
-            // Skip nodes that don't have material (empty)
-            if (!node.Material.HasValue) continue;
+            if (node.Material == MaterialEnum.Empty) continue; // Empty nodes are not rendered
 
-            // Apply neighbor culling if enabled - skip nodes with all solid neighbors
-            if (_neighborCullingEnabled && _octree.HasAllSolidNeighbors(node))
+            if (node.IsRealVoxel)
             {
-                continue;
-            }
-
-            float distanceToCamera = node.Center.DistanceTo(cameraPos);
-
-            if (distanceToCamera <= _realizationRadius)
-            {
-                nearNodes.Add(node);
+                _nearNodes.Add(node);
             }
             else
             {
@@ -173,49 +167,34 @@ public partial class Asteroid : Node3D
             }
         }
 
-        // Limit near nodes to max static rocks
-        if (nearNodes.Count > _maxStaticRocks)
+        // If there are too many near nodes, bump the farthest ones to far zone
+        if (_nearNodes.Count > _maxStaticRocks)
         {
-            // Sort by distance to camera (closest first)
-            nearNodes.Sort((a, b) =>
-            {
-                float distA = a.Center.DistanceTo(cameraPos);
+            List<OctreeNode> sortedNearNodes = new List<OctreeNode>(_nearNodes);
+            sortedNearNodes.Sort((a, b) =>
+            { float distA = a.Center.DistanceTo(cameraPos);
                 float distB = b.Center.DistanceTo(cameraPos);
                 return distA.CompareTo(distB);
             });
 
-            // Move excess nodes to far list
-            for (int i = _maxStaticRocks; i < nearNodes.Count; i++)
-            {
-                _farNodes.Add(nearNodes[i]);
-            }
-            nearNodes.RemoveRange(_maxStaticRocks, nearNodes.Count - _maxStaticRocks);
+            _farNodes.AddRange(sortedNearNodes.GetRange(_maxStaticRocks, sortedNearNodes.Count - _maxStaticRocks));
+            _nearNodes = sortedNearNodes.GetRange(0, _maxStaticRocks);
         }
 
-        // Update static rocks for near nodes
-        UpdateStaticRocks(nearNodes);
-
-        // Update multimesh for far nodes
-        if (_needsMultiMeshUpdate || cameraMoveDistanceSignificant())
-        {
-            UpdateMultiMesh();
-            _needsMultiMeshUpdate = false;
-        }
-
-        _staticRockCount = _staticRocks.Count;
-        _multiMeshCount = _farNodes.Count;
+        UpdateStaticRocks();
+        UpdateMultiMesh();
     }
 
     /// <summary>
     /// Updates static rock instances for nearby nodes.
     /// Spawns new rocks for nodes that don't have them, removes rocks for nodes that are now far.
     /// </summary>
-    private void UpdateStaticRocks(List<OctreeNode> nearNodes)
+    private void UpdateStaticRocks()
     {
         HashSet<Vector3I> neededNodes = new();
 
         // Spawn or update rocks for near nodes
-        foreach (var node in nearNodes)
+        foreach (var node in _nearNodes)
         {
             Vector3I key = new Vector3I(
                 Mathf.RoundToInt(node.Center.X * 1000),
@@ -236,9 +215,9 @@ public partial class Asteroid : Node3D
 
                     // Apply material color
                     MeshInstance3D meshInstance = rock.GetNodeOrNull<MeshInstance3D>("MeshInstance3D");
-                    if (meshInstance != null && node.Material.HasValue)
+                    if (meshInstance != null)
                     {
-                        int materialIndex = (int)node.Material.Value;
+                        int materialIndex = (int)node.Material;
                         meshInstance.MaterialOverride = Materials.materialInstances[materialIndex];
                     }
 
@@ -262,6 +241,8 @@ public partial class Asteroid : Node3D
         {
             _staticRocks.Remove(key);
         }
+
+        _staticRockCount = _staticRocks.Count;
     }
 
     /// <summary>
@@ -288,14 +269,13 @@ public partial class Asteroid : Node3D
 
             // Set color based on material (or gray if unknown)
             Color color = new Color(0.5f, 0.5f, 0.5f); // Default gray
-            if (node.Material.HasValue)
-            {
-                int materialIndex = (int)node.Material.Value;
-                color = Materials.materialColors[materialIndex];
-            }
+            int materialIndex = (int)node.Material;
+            color = Materials.materialColors[materialIndex];
 
             _multiMeshRock.Multimesh.SetInstanceColor(i, color);
         }
+
+        _multiMeshCount = count;
     }
 
     /// <summary>
@@ -413,7 +393,7 @@ public partial class Asteroid : Node3D
         _enableCrossSectionCut = enable;
         if (_octree != null)
         {
-            _octree.EnableCrossSectionCut = enable;
+            //_octree.EnableCrossSectionCut = enable;
             _needsMultiMeshUpdate = true;
             UpdateLOD();
         }
@@ -422,7 +402,7 @@ public partial class Asteroid : Node3D
     /// <summary>
     /// Gets the underlying voxel octree.
     /// </summary>
-    public VoxelOctree GetOctree()
+    public Octree GetOctree()
     {
         return _octree;
     }

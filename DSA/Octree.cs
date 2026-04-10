@@ -71,35 +71,35 @@ public class Octree
     public Octree(AsteroidGenerator generator)
     {
         Generator = generator;
-        int rootHeight = MathF.Ceiling(MathF.Log2(Generator.MaxRadius * 2)); // Ensure the root node can encompass the entire asteroid
+        int rootHeight = (int) MathF.Ceiling(MathF.Log2(Generator.MaxRadius * 2)); // Ensure the root node can encompass the entire asteroid
         MaterialEnum rootMaterial = Generator.Sample(Vector3.Zero); // Sample the center of the asteroid to determine root material
-        Root = new OctreeNode(Vector3.Zero, (int)rootHeight, rootMaterial);
+        Root = new OctreeNode(Vector3.Zero, rootHeight, rootMaterial);
     }
 
     // Similar to Barnes-Hut approximation for gravity
     // Returns a list of nodes (possibly leaf, possibly internal) where farther nodes are larger
-    public OctreeNode[] QueryForLOD(Vector3 queryPos, float theta)
+    public List<OctreeNode> QueryForLOD(Vector3 queryPos, float theta)
     {
-        List<OctreeNode> stack = new List<OctreeNode>();
+        Stack<OctreeNode> stack = new Stack<OctreeNode>();
         List<OctreeNode> result = new List<OctreeNode>();
 
-        stack.Add(Root);
+        stack.Push(Root);
 
         while (stack.Count > 0)
         {
-            OctreeNode node = stack[stack.Count - 1];
+            OctreeNode node = stack.Pop();
             float nodeTheta = node.Size / queryPos.DistanceTo(node.Center);
             if (nodeTheta < theta) // Case 1: This node is far enough away to approximate itself
             {
                 result.Add(node);
-                stack.RemoveAt(stack.Count - 1);
+                stack.Pop();
             }
             else // Case 2: We need to explore children
             {
                 if (node.IsRealVoxel) // Case 2a: This is a leaf node and is a real voxel. There are no children to explore, so we have to use this node even though it's close
                 {
                     result.Add(node);
-                    stack.RemoveAt(stack.Count - 1);
+                    stack.Pop();
                 }
                 else // Case 2b: Proceed with children
                 {
@@ -113,12 +113,15 @@ public class Octree
                             node.Children[i] = new OctreeNode(childCenters[i], node.Height - 1, childMaterial);
                         }
                     }
-                    stack.RemoveAt(stack.Count - 1);
-                    stack.AddRange(node.Children);
+                    stack.Pop();
+                    for (int i = 0; i < 8; i++)
+                    {
+                        stack.Push(node.Children[i]);
+                    }
                 }
             }
                 
         }
-        return result.ToArray();
+        return result;
     }
 }
