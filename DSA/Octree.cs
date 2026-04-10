@@ -92,14 +92,12 @@ public class Octree
             if (nodeTheta < theta) // Case 1: This node is far enough away to approximate itself
             {
                 result.Add(node);
-                stack.Pop();
             }
             else // Case 2: We need to explore children
             {
                 if (node.IsRealVoxel) // Case 2a: This is a leaf node and is a real voxel. There are no children to explore, so we have to use this node even though it's close
                 {
                     result.Add(node);
-                    stack.Pop();
                 }
                 else // Case 2b: Proceed with children
                 {
@@ -113,7 +111,6 @@ public class Octree
                             node.Children[i] = new OctreeNode(childCenters[i], node.Height - 1, childMaterial);
                         }
                     }
-                    stack.Pop();
                     for (int i = 0; i < 8; i++)
                     {
                         stack.Push(node.Children[i]);

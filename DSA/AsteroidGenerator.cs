@@ -35,6 +35,10 @@ public class AsteroidGenerator
         TerrainNoise = new FastNoiseLite();
         TerrainNoise.Seed = (int)(Seed & 0x7FFFFFFF); // Convert to int, keeping lower 31 bits
         TerrainNoise.NoiseType = FastNoiseLite.NoiseTypeEnum.Perlin;
+        TerrainNoise.Frequency = 2.71f;
+        TerrainNoise.FractalOctaves = 5;
+        TerrainNoise.FractalLacunarity = 2.0f;
+        TerrainNoise.FractalGain = 0.5f;
     }
 
     public AsteroidGenerator(ulong seed, float radius, float gravitationalMass, float maxHeight)
@@ -51,7 +55,7 @@ public class AsteroidGenerator
     {
         Vector3 normalizedPos = position.Normalized(); // Project to unit sphere. This means you are only distorting the surface of a sphere and can't get overhangs or caves, but this is easier to understand
         float noiseValue = TerrainNoise.GetNoise3Dv(normalizedPos);
-        noiseValue *= noiseValue; // Test: try to generate mountains by squaring the height
+        noiseValue *= MathF.Abs(noiseValue); // Test: try to generate mountains by squaring the height
         return noiseValue * MaxHeight;
     }
 

@@ -10,13 +10,12 @@ public partial class Asteroid : Node3D
     [Export] private MultiMeshInstance3D _multiMeshRock; // Far away approximations of octree nodes
 
     // Configuration
-    [Export] private float _radius = 100f;
+    [Export] private float _radius = 500f;
     [Export] private ulong _seed = 12345;
     //[Export] private int _maxDepth = 8;
     [Export] private bool _enableCrossSectionCut = false;
     [Export] private int _maxStaticRocks = 10000;
     [Export] private float _cameraMoveThreshold = 10f; // Minimum camera movement to trigger update
-    [Export] private float _thetaThreshold = 0.5f; // Barnes-Hut theta threshold for LOD
 
     // Internal state
     private Octree _octree;
@@ -44,13 +43,16 @@ public partial class Asteroid : Node3D
     // Debug stats
     private int _multiMeshCount = 0;
     private int _staticRockCount = 0;
+    private int _rockCount = 0;
+    private int _iceCount = 0;
+    private int _metalCount = 0;
 
     public override void _Ready()
     {
         float bulkDensity = 2.5f;
         float idealVolume = (4.0f / 3.0f) * Mathf.Pi * Mathf.Pow(_radius, 3);
         float gravitationalMass = bulkDensity * idealVolume;
-        float maxHeight = _radius * 0.2f;
+        float maxHeight = _radius * 0.8f;
         // Initialize asteroid generator
         _generator = new AsteroidGenerator(_seed, _radius, gravitationalMass, maxHeight);
         // Initialize the octree with procedural generation
@@ -99,6 +101,7 @@ public partial class Asteroid : Node3D
 
         // Initial update
         UpdateLOD();
+        UpdateDebugDisplay();
     }
 
     public override void _Process(double delta)
@@ -113,7 +116,6 @@ public partial class Asteroid : Node3D
             _lastCameraPosition = _camera.GlobalPosition;
         }
 
-        // Update debug display
         UpdateDebugDisplay();
     }
 
@@ -147,8 +149,9 @@ public partial class Asteroid : Node3D
         if (_camera == null || _octree == null) return;
 
         Vector3 cameraPos = _camera.GlobalPosition;
+        float thetaThreshold = 1.0f / _realizationRadius; // I want a 1 voxel to be rendered 50 m away -> 1 / 50 = 0.02
 
-        List<OctreeNode> visibleNodes = _octree.QueryForLOD(cameraPos, _thetaThreshold);
+        List<OctreeNode> visibleNodes = _octree.QueryForLOD(cameraPos, thetaThreshold);
 
         _nearNodes.Clear();
         _farNodes.Clear();
@@ -300,9 +303,6 @@ public partial class Asteroid : Node3D
         return null;
     }
 
-    /// <summary>
-    /// Returns a rock to the pool for reuse.
-    /// </summary>
     private void ReturnRockToPool(Node3D rock)
     {
         if (rock != null)
@@ -312,18 +312,31 @@ public partial class Asteroid : Node3D
         }
     }
 
-    /// <summary>
-    /// Checks if camera has moved significantly enough to update multimesh.
-    /// </summary>
-    private bool cameraMoveDistanceSignificant()
+    private void UpdateRockCounts()
     {
-        // MultiMesh doesn't need frequent updates, only when nodes cross the threshold
-        return false;
+        if (_rockCount + _iceCount + _metalCount == _nearNodes.Count) return; // No change in near nodes, skip counting
+
+        _rockCount = 0;
+        _iceCount = 0;
+        _metalCount = 0;
+
+        foreach (var node in _nearNodes)
+        {
+            switch (node.Material)
+            {
+                case MaterialEnum.Rock:
+                    _rockCount++;
+                    break;
+                case MaterialEnum.Ice:
+                    _iceCount++;
+                    break;
+                case MaterialEnum.Metal:
+                    _metalCount++;
+                    break;
+            }
+        }
     }
 
-    /// <summary>
-    /// Updates the debug display with current stats.
-    /// </summary>
     private void UpdateDebugDisplay()
     {
         if (_debugLabel == null) return;
@@ -347,22 +360,12 @@ public partial class Asteroid : Node3D
         text += "---\n";
 
         // Count materials in near nodes
-        int rockCount = 0, iceCount = 0, metalCount = 0;
-        foreach (var kvp in _staticRocks)
-        {
-            MeshInstance3D meshInstance = kvp.Value.GetNodeOrNull<MeshInstance3D>("MeshInstance3D");
-            if (meshInstance != null && meshInstance.MaterialOverride is StandardMaterial3D mat)
-            {
-                Color color = mat.AlbedoColor;
-                if (color == Materials.materialColors[0]) rockCount++;
-                else if (color == Materials.materialColors[1]) iceCount++;
-                else if (color == Materials.materialColors[2]) metalCount++;
-            }
-        }
+        // Does not run if the number of static rocks has not changed
+        UpdateRockCounts();
 
-        text += $"Rock: {rockCount}\n";
-        text += $"Ice: {iceCount}\n";
-        text += $"Metal: {metalCount}";
+        text += $"Rock: {_rockCount}\n";
+        text += $"Ice: {_iceCount}\n";
+        text += $"Metal: {_metalCount}";
 
         _debugLabel.Text = text;
     }
@@ -391,12 +394,8 @@ public partial class Asteroid : Node3D
     public void SetCrossSectionCut(bool enable)
     {
         _enableCrossSectionCut = enable;
-        if (_octree != null)
-        {
-            //_octree.EnableCrossSectionCut = enable;
-            _needsMultiMeshUpdate = true;
-            UpdateLOD();
-        }
+        _needsMultiMeshUpdate = true;
+        UpdateLOD();
     }
 
     /// <summary>
