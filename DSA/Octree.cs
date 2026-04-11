@@ -327,14 +327,9 @@ public class Octree
         }
 
         Dictionary<string, string> debugInfo = Settings.GetSettings().DebugInfo;
-        GD.Print($"{visitedNodes.ToString()}, {neighborChecks.ToString()}, {result.Count.ToString()}");
         debugInfo["VisitedNodes"] = visitedNodes.ToString();
         debugInfo["NeighborChecks"] = neighborChecks.ToString();
         debugInfo["VisibleMeshes"] = result.Count.ToString();
-        GD.Print($"{debugInfo["VisitedNodes"]}, {debugInfo["NeighborChecks"]}, {debugInfo["VisibleMeshes"]}");
-        GD.Print("Octree");
-        GD.Print(Settings.GetSettings());
-        GD.Print(debugInfo);
 
         return result;
     }

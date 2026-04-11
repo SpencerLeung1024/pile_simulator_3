@@ -34,10 +34,6 @@ public partial class Asteroid : Node3D
     private int _octreeUs = 0;
     private int _meshUs = 0;
 
-    private int _visitedNodes = 0;
-    private int _neighborChecks = 0;
-    private int _visibleMeshes = 0;
-
     private int _multiMeshCount = 0;
     private int _staticRockCount = 0;
 
@@ -108,10 +104,6 @@ public partial class Asteroid : Node3D
 
         debugInfo["OctreeTime"] = $"{_octreeUs/1000.0f:F2} ms";
         debugInfo["MeshTime"] = $"{_meshUs/1000.0f:F2} ms";
-
-        debugInfo["VisitedNodes"] = _visitedNodes.ToString();
-        debugInfo["NeighborChecks"] = _neighborChecks.ToString();
-        debugInfo["VisibleMeshes"] = _visibleMeshes.ToString();
 
         debugInfo["MultiMeshCount"] = _multiMeshCount.ToString();
         debugInfo["StaticCount"] = $"{_staticRockCount} / {_settings.MaxStaticRocks}";
