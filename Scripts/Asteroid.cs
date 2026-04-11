@@ -12,21 +12,11 @@ public partial class Asteroid : Node3D
     // Configuration
     [Export] private float _radius = 500f;
     [Export] private ulong _seed = 12345;
-    //[Export] private int _maxDepth = 8;
-    [Export] private bool _enableCrossSectionCut = false;
-    [Export] private int _maxStaticRocks = 10000;
     [Export] private float _cameraMoveThreshold = 10f; // Minimum camera movement to trigger update
 
     // Internal state
     private Octree _octree;
     private AsteroidGenerator _generator;
-    private float _realizationRadius = 50f; // Controlled by UI slider
-    private Camera3D _camera;
-    private HSlider _realDistanceSlider;
-    private HSlider _maxStaticRocksSlider;
-    private CheckButton _neighborCullingCheck;
-    private RichTextLabel _debugLabel;
-    private bool _neighborCullingEnabled = false;
 
     // Near zone: StaticBody3D rocks (inside realizationRadius)
     private List<OctreeNode> _nearNodes = new();
@@ -41,11 +31,100 @@ public partial class Asteroid : Node3D
     private Vector3 _lastCameraPosition = Vector3.Zero;
 
     // Debug stats
+    private int _octreeUs = 0;
+    private int _meshUs = 0;
+
+    private int _visitedNodes = 0;
+    private int _neighborChecks = 0;
+    private int _visibleMeshes = 0;
+
     private int _multiMeshCount = 0;
     private int _staticRockCount = 0;
+
     private int _rockCount = 0;
     private int _iceCount = 0;
     private int _metalCount = 0;
+
+    // Settings and UI singletons
+    private Settings _settings;
+    private UIController _uiController;
+    private FreeCamController _camera;
+
+    // Handle signals
+    private void OnRealizationRadiusChanged(double value)
+    {
+        _needsMultiMeshUpdate = true;
+    }
+
+    private void OnMaxStaticRocksChanged(double value)
+    {
+        _needsMultiMeshUpdate = true;
+    }
+
+    private void OnNeighborCullingChanged(bool toggled)
+    {
+        _needsMultiMeshUpdate = true;
+    }
+
+    private void OnCrossSectionChanged(bool toggled)
+    {
+        _needsMultiMeshUpdate = true;
+    }
+
+    private void OnConsolidate()
+    {
+        _octree?.Consolidate(deleteChildren: true);
+        _needsMultiMeshUpdate = true;
+    }
+
+    private void UpdateRockCounts()
+    {
+        if (_rockCount + _iceCount + _metalCount == _nearNodes.Count) return; // No change in near nodes, skip counting
+
+        _rockCount = 0;
+        _iceCount = 0;
+        _metalCount = 0;
+
+        foreach (var node in _nearNodes)
+        {
+            switch (node.Material)
+            {
+                case MaterialEnum.Rock:
+                    _rockCount++;
+                    break;
+                case MaterialEnum.Ice:
+                    _iceCount++;
+                    break;
+                case MaterialEnum.Metal:
+                    _metalCount++;
+                    break;
+            }
+        }
+    }
+
+    private void PushDebugInfo()
+    {
+        Dictionary<string, string> debugInfo = _settings.DebugInfo;
+
+        debugInfo["OctreeTime"] = $"{_octreeUs/1000.0f:F2} ms";
+        debugInfo["MeshTime"] = $"{_meshUs/1000.0f:F2} ms";
+
+        debugInfo["VisitedNodes"] = _visitedNodes.ToString();
+        debugInfo["NeighborChecks"] = _neighborChecks.ToString();
+        debugInfo["VisibleMeshes"] = _visibleMeshes.ToString();
+
+        debugInfo["MultiMeshCount"] = _multiMeshCount.ToString();
+        debugInfo["StaticCount"] = $"{_staticRockCount} / {_settings.MaxStaticRocks}";
+        debugInfo["RigidCount"] = "0";
+
+        // Count materials in near nodes
+        // May return if there has been no change
+        UpdateRockCounts();
+
+        debugInfo["RockCount"] = _rockCount.ToString();
+        debugInfo["IceCount"] = _iceCount.ToString();
+        debugInfo["MetalCount"] = _metalCount.ToString();
+    }
 
     public override void _Ready()
     {
@@ -53,55 +132,30 @@ public partial class Asteroid : Node3D
         float idealVolume = (4.0f / 3.0f) * Mathf.Pi * Mathf.Pow(_radius, 3);
         float gravitationalMass = bulkDensity * idealVolume;
         float maxHeight = _radius * 0.8f;
+
         // Initialize asteroid generator
         _generator = new AsteroidGenerator(_seed, _radius, gravitationalMass, maxHeight);
+
         // Initialize the octree with procedural generation
         _octree = new Octree(_generator);
 
-        // Get camera reference from parent (World)
-        Node parent = GetParent();
-        if (parent != null)
+        // Get singletons
+        _settings = Settings.GetSettings();
+        _uiController = UIController.GetUIController();
+        _camera = FreeCamController.GetFreeCamController();
+        // Connect to UI signals through UIController
+        if (_uiController != null)
         {
-            _camera = parent.GetNodeOrNull<Camera3D>("Camera3D");
-        }
-
-        // Get UI references
-        var ui = GetParent()?.GetNodeOrNull<Control>("UI");
-        if (ui != null)
-        {
-            _realDistanceSlider = ui.GetNodeOrNull<HSlider>("RealDistanceSlider");
-            _maxStaticRocksSlider = ui.GetNodeOrNull<HSlider>("MaxStaticRocksSlider");
-            _neighborCullingCheck = ui.GetNodeOrNull<CheckButton>("NeighborCullingCheck");
-            _debugLabel = ui.GetNodeOrNull<RichTextLabel>("RichTextLabel");
-
-            if (_realDistanceSlider != null)
-            {
-                _realizationRadius = (float)_realDistanceSlider.Value;
-                _realDistanceSlider.ValueChanged += OnRealDistanceSliderChanged;
-            }
-
-            if (_maxStaticRocksSlider != null)
-            {
-                _maxStaticRocks = (int)_maxStaticRocksSlider.Value;
-                _maxStaticRocksSlider.ValueChanged += OnMaxStaticRocksSliderChanged;
-            }
-
-            if (_neighborCullingCheck != null)
-            {
-                _neighborCullingEnabled = _neighborCullingCheck.ButtonPressed;
-                _neighborCullingCheck.Toggled += OnNeighborCullingToggled;
-            }
-        }
-
-        // Ensure MultiMeshRock is set up
-        if (_multiMeshRock == null)
-        {
-            _multiMeshRock = GetNodeOrNull<MultiMeshInstance3D>("MultiMeshRock");
+            _uiController.RealizationRadiusSlider.ValueChanged += OnRealizationRadiusChanged;
+            _uiController.MaxStaticRocksSlider.ValueChanged += OnMaxStaticRocksChanged;
+            _uiController.NeighborCullingCheck.Toggled += OnNeighborCullingChanged;
+            _uiController.CrossSectionCheck.Toggled += OnCrossSectionChanged;
+            _uiController.ConsolidateButton.Pressed += OnConsolidate;
         }
 
         // Initial update
         UpdateLOD();
-        UpdateDebugDisplay();
+        PushDebugInfo();
     }
 
     public override void _Process(double delta)
@@ -116,28 +170,7 @@ public partial class Asteroid : Node3D
             _lastCameraPosition = _camera.GlobalPosition;
         }
 
-        UpdateDebugDisplay();
-    }
-
-    private void OnRealDistanceSliderChanged(double value)
-    {
-        _realizationRadius = (float)value;
-        _needsMultiMeshUpdate = true;
-        UpdateLOD();
-    }
-
-    private void OnMaxStaticRocksSliderChanged(double value)
-    {
-        _maxStaticRocks = (int)value;
-        _needsMultiMeshUpdate = true;
-        UpdateLOD();
-    }
-
-    private void OnNeighborCullingToggled(bool enabled)
-    {
-        _neighborCullingEnabled = enabled;
-        _needsMultiMeshUpdate = true;
-        UpdateLOD();
+        PushDebugInfo();
     }
 
     /// <summary>
@@ -149,9 +182,14 @@ public partial class Asteroid : Node3D
         if (_camera == null || _octree == null) return;
 
         Vector3 cameraPos = _camera.GlobalPosition;
-        float thetaThreshold = 1.0f / _realizationRadius; // I want a 1 voxel to be rendered 50 m away -> 1 / 50 = 0.02
+        float thetaThreshold = 1.0f / _settings.RealizationRadius; // I want a 1 voxel to be rendered 50 m away -> 1 / 50 = 0.02
 
-        List<OctreeNode> visibleNodes = _octree.QueryForLOD(cameraPos, thetaThreshold, _neighborCullingEnabled);
+        ulong octreeStartUs = Time.GetTicksUsec();
+
+        List<OctreeNode> visibleNodes = _octree.QueryForLOD(cameraPos, thetaThreshold, _settings.NeighborCulling);
+
+        ulong octreeEndUs = Time.GetTicksUsec();
+        _octreeUs = (int)(octreeEndUs - octreeStartUs);
 
         _nearNodes.Clear();
         _farNodes.Clear();
@@ -171,21 +209,27 @@ public partial class Asteroid : Node3D
         }
 
         // If there are too many near nodes, bump the farthest ones to far zone
-        if (_nearNodes.Count > _maxStaticRocks)
+        if (_nearNodes.Count > _settings.MaxStaticRocks)
         {
             List<OctreeNode> sortedNearNodes = new List<OctreeNode>(_nearNodes);
             sortedNearNodes.Sort((a, b) =>
-            { float distA = a.Center.DistanceTo(cameraPos);
+            {
+                float distA = a.Center.DistanceTo(cameraPos);
                 float distB = b.Center.DistanceTo(cameraPos);
                 return distA.CompareTo(distB);
             });
 
-            _farNodes.AddRange(sortedNearNodes.GetRange(_maxStaticRocks, sortedNearNodes.Count - _maxStaticRocks));
-            _nearNodes = sortedNearNodes.GetRange(0, _maxStaticRocks);
+            _farNodes.AddRange(sortedNearNodes.GetRange(_settings.MaxStaticRocks, sortedNearNodes.Count - _settings.MaxStaticRocks));
+            _nearNodes = sortedNearNodes.GetRange(0, _settings.MaxStaticRocks);
         }
+
+        ulong meshStartUs = Time.GetTicksUsec();
 
         UpdateStaticRocks();
         UpdateMultiMesh();
+
+        ulong meshEndUs = Time.GetTicksUsec();
+        _meshUs = (int)(meshEndUs - meshStartUs);
     }
 
     /// <summary>
@@ -199,7 +243,7 @@ public partial class Asteroid : Node3D
         // Spawn or update rocks for near nodes
         foreach (var node in _nearNodes)
         {
-            if (node.Center.Z > 0.0f && _enableCrossSectionCut) continue; // Skip the closer half of nodes if cross-section cut is enabled
+            if (node.Center.Z > 0.0f && _settings.CrossSection) continue; // Skip the closer half of nodes if cross-section cut is enabled
 
             Vector3I key = new Vector3I(
                 Mathf.RoundToInt(node.Center.X * 1000),
@@ -260,7 +304,7 @@ public partial class Asteroid : Node3D
         _needsMultiMeshUpdate = false;
 
         // We need to filter out nodes here so that indices don't get messed up
-        if (_enableCrossSectionCut)
+        if (_settings.CrossSection)
         {
             _farNodes.RemoveAll(node => node.Center.Z > 0.0f);
         }
@@ -320,92 +364,6 @@ public partial class Asteroid : Node3D
             rock.Visible = false;
             _staticRockPool.Enqueue(rock);
         }
-    }
-
-    private void UpdateRockCounts()
-    {
-        if (_rockCount + _iceCount + _metalCount == _nearNodes.Count) return; // No change in near nodes, skip counting
-
-        _rockCount = 0;
-        _iceCount = 0;
-        _metalCount = 0;
-
-        foreach (var node in _nearNodes)
-        {
-            switch (node.Material)
-            {
-                case MaterialEnum.Rock:
-                    _rockCount++;
-                    break;
-                case MaterialEnum.Ice:
-                    _iceCount++;
-                    break;
-                case MaterialEnum.Metal:
-                    _metalCount++;
-                    break;
-            }
-        }
-    }
-
-    private void UpdateDebugDisplay()
-    {
-        if (_debugLabel == null) return;
-
-        string text = $"FPS: {Engine.GetFramesPerSecond()}\n";
-
-        if (_camera != null)
-        {
-            Vector3 pos = _camera.GlobalPosition;
-            float distance = pos.DistanceTo(Vector3.Zero);
-            text += $"({pos.X:F2}, {pos.Y:F2}, {pos.Z:F2})\n";
-            text += $"Real Distance: {_realizationRadius:F0} m\n";
-            text += $"Camera Dist: {distance:F2} m\n";
-        }
-
-        text += "---\n";
-        text += $"MultiMesh: {_multiMeshCount}\n";
-        text += $"Static: {_staticRockCount} / {_maxStaticRocks}\n";
-        text += $"Rigid: 0\n";
-        text += $"Culling: {(_neighborCullingEnabled ? "ON" : "OFF")}\n";
-        text += "---\n";
-
-        // Count materials in near nodes
-        // Does not run if the number of static rocks has not changed
-        UpdateRockCounts();
-
-        text += $"Rock: {_rockCount}\n";
-        text += $"Ice: {_iceCount}\n";
-        text += $"Metal: {_metalCount}";
-
-        _debugLabel.Text = text;
-    }
-
-    /// <summary>
-    /// Sets the realization radius (can be called from external scripts).
-    /// </summary>
-    public void SetRealizationRadius(float radius)
-    {
-        _realizationRadius = radius;
-        _needsMultiMeshUpdate = true;
-        UpdateLOD();
-    }
-
-    /// <summary>
-    /// Gets the current realization radius.
-    /// </summary>
-    public float GetRealizationRadius()
-    {
-        return _realizationRadius;
-    }
-
-    /// <summary>
-    /// Sets whether to enable the cross-section cut at z=0.
-    /// </summary>
-    public void SetCrossSectionCut(bool enable)
-    {
-        _enableCrossSectionCut = enable;
-        _needsMultiMeshUpdate = true;
-        UpdateLOD();
     }
 
     /// <summary>

@@ -18,14 +18,31 @@ public partial class FreeCamController : Camera3D
 	private bool _mouseCaptured = false;
 	private Vector2 _mouseDelta = Vector2.Zero;
 
+	// Singletons
+	private Settings _settings = Settings.GetSettings();
+
+	private static FreeCamController singleton = null;
+
+	public static FreeCamController GetFreeCamController()
+	{
+		if (singleton == null)
+		{
+			throw new Exception("FreeCamController singleton not initialized yet");
+		}
+		return singleton;
+	}
+
 	private void PushDebugInfo()
 	{
-		Dictionary<string, string> debugInfo = Settings.GetSettings().DebugInfo;
+		Dictionary<string, string> debugInfo = _settings.DebugInfo;
 		debugInfo["CameraPos"] = $"({GlobalPosition.X:F2}, {GlobalPosition.Y:F2}, {GlobalPosition.Z:F2})";
+		debugInfo["CameraDist"] = $"{GlobalPosition.Length():F2} m";
 	}
 
 	public override void _Ready()
 	{
+		singleton = this;
+
 		_currentSpeed = BaseSpeed;
 
 		// Look toward origin initially

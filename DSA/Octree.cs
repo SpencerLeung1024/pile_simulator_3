@@ -212,54 +212,6 @@ public class Octree
         return currentNode;
     }
 
-    /*
-    // Gets 6 neighbors: [-x, -y, -z, +x, +y, +z].
-    // Has a really messy path for accepting a cache to hopefully speed up rendering
-    // No node has the same center as any other node. Children of a layer have centers offset by a quarter of the parent's size. They form a lattice half the size and offset a quarter compared to the parent lattice
-    public OctreeNode[] GetNeighbors(OctreeNode node, Dictionary<Vector3, OctreeNode>? cache = null)
-    {
-        Vector3[] queryPoints = new Vector3[]
-        {
-            node.Center + new Vector3(-node.Size, 0, 0), // -x
-            node.Center + new Vector3(0, -node.Size, 0), // -y
-            node.Center + new Vector3(0, 0, -node.Size), // -z
-            node.Center + new Vector3(node.Size, 0, 0), // +x
-            node.Center + new Vector3(0, node.Size, 0), // +y
-            node.Center + new Vector3(0, 0, node.Size) // +z
-        };
-        OctreeNode[] neighbors = new OctreeNode[6];
-        for (int i = 0; i < 6; i++)
-        {
-            if (cache != null && cache.TryGetValue(queryPoints[i], out OctreeNode cachedNode))
-            {
-                neighbors[i] = cachedNode;
-            }
-            else
-            {
-                neighbors[i] = Query(queryPoints[i], node.Height);
-                if (cache != null)
-                {
-                    cache[queryPoints[i]] = neighbors[i];
-                }
-            }
-        }
-        return neighbors;
-    }
-
-    private int NonEmpty(OctreeNode[] nodes)
-    {
-        int count = 0;
-        foreach (var node in nodes)
-        {
-            if (node != null && node.Material != MaterialEnum.Empty)
-            {
-                count++;
-            }
-        }
-        return count;
-    }
-    */
-
     // Supersedes the previous weird mechanism
     // This stores the result in the node's ExposedFaces field
     public byte GetExposedFaces(OctreeNode node)
@@ -302,12 +254,9 @@ public class Octree
     {
         Stack<OctreeNode> stack = new Stack<OctreeNode>();
         List<OctreeNode> result = new List<OctreeNode>();
-        //Dictionary<Vector3, OctreeNode> neighborCache = new Dictionary<Vector3, OctreeNode>();
         
-        int nodesVisited = 0;
-        //int GetNeighborCalls = 0;
-        int GetExposedFacesCalls = 0;
-        //int[] debugCount = new int[7];
+        int visitedNodes = 0;
+        int neighborChecks = 0;
         
         stack.Push(Root);
 
@@ -315,7 +264,7 @@ public class Octree
         {
             OctreeNode node = stack.Pop();
 
-            nodesVisited++;
+            visitedNodes++;
 
             // Skip truly empty or truly solid nodes that are not final
             // These must be truly empty (and render nothing) or enclosed deep within the asteroid (and are culled)
@@ -332,17 +281,7 @@ public class Octree
                     bool passedNeighborCheck = true;
                     if (neighborCulling)
                     {
-                        /*
-                        GetNeighborCalls++;
-                        OctreeNode[] neighbors = GetNeighbors(node, neighborCache);
-                        int nonEmptyNeighbors = NonEmpty(neighbors);
-                        debugCount[nonEmptyNeighbors]++;
-                        if (nonEmptyNeighbors == 6)
-                        {
-                            passedNeighborCheck = false; // All neighbors are solid
-                        }
-                        */
-                        GetExposedFacesCalls++;
+                        neighborChecks++;
                         byte exposedFaces = GetExposedFaces(node);
                         passedNeighborCheck = exposedFaces != 0x00;
                     }
@@ -361,17 +300,7 @@ public class Octree
                         bool passedNeighborCheck = true;
                         if (neighborCulling)
                         {
-                            /*
-                            GetNeighborCalls++;
-                            OctreeNode[] neighbors = GetNeighbors(node, neighborCache);
-                            int nonEmptyNeighbors = NonEmpty(neighbors);
-                            debugCount[nonEmptyNeighbors]++;
-                            if (nonEmptyNeighbors == 6)
-                            {
-                                passedNeighborCheck = false; // All neighbors are solid
-                            }
-                            */
-                            GetExposedFacesCalls++;
+                            neighborChecks++;
                             byte exposedFaces = GetExposedFaces(node);
                             passedNeighborCheck = exposedFaces != 0x00;
                         }
@@ -397,33 +326,15 @@ public class Octree
                 
         }
 
-        GD.Print($"Visited {nodesVisited} nodes");
-        GD.Print($"Called GetExposedFaces {GetExposedFacesCalls} times");
-        //GD.Print($"Called GetNeighbors {GetNeighborCalls} times");
-        //GD.Print($"neighbors {string.Join(", ", debugCount)}");
-        //GD.Print($"Neighbor cache has {neighborCache.Count} entries");
-        GD.Print($"Returned {result.Count} nodes");
-
-        // 500 m radius asteroid
-        // 500 m + (0.8 * 500 m) = 900 m max radius = 2048 m root = height 11 root
-
-        // At the initial spawn point 1000 m away
-        /*
-        Visited 3632201 nodes
-        Called GetNeighbors 269603 times
-        neighbors 0, 30, 264, 4224, 5292, 7449, 252344
-        Neighbor cache has 298890 entries
-        Returned 17259 nodes
-        */
-
-        // About 45 m from the surface
-        /*
-        Visited 16163489 nodes
-        Called GetNeighbors 3470369 times
-        neighbors 0, 52, 448, 17017, 21658, 45481, 3385713
-        Neighbor cache has 3709953 entries
-        Returned 84656 nodes
-        */
+        Dictionary<string, string> debugInfo = Settings.GetSettings().DebugInfo;
+        GD.Print($"{visitedNodes.ToString()}, {neighborChecks.ToString()}, {result.Count.ToString()}");
+        debugInfo["VisitedNodes"] = visitedNodes.ToString();
+        debugInfo["NeighborChecks"] = neighborChecks.ToString();
+        debugInfo["VisibleMeshes"] = result.Count.ToString();
+        GD.Print($"{debugInfo["VisitedNodes"]}, {debugInfo["NeighborChecks"]}, {debugInfo["VisibleMeshes"]}");
+        GD.Print("Octree");
+        GD.Print(Settings.GetSettings());
+        GD.Print(debugInfo);
 
         return result;
     }

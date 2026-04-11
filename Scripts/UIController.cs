@@ -10,7 +10,6 @@ public class Settings
 	public int MaxStaticRocks;
 	public bool NeighborCulling;
 	public bool CrossSection;
-	public bool NeedsConsolidation;
 	
 	private static Settings singleton = null;
 
@@ -27,90 +26,111 @@ public class Settings
 public partial class UIController : Control
 {
 	// Scene nodes
-	[Export] private RichTextLabel _debugLabel;
-	[Export] private HSlider _realizationRadiusSlider;
-	[Export] private Label _realizationRadiusLabel;
-	[Export] private HSlider _maxStaticRocksSlider;
-	[Export] private Label _maxStaticRocksLabel;
-	[Export] private CheckButton _neighborCullingCheck;
-	[Export] private CheckButton _crossSectionCheck;
-	[Export] private Button _consolidateButton;
+	// These need to be public so other scripts can connect to signals from the UI elements
+	[Export] public RichTextLabel DebugLabel;
+	[Export] public HSlider RealizationRadiusSlider;
+	[Export] public Label RealizationRadiusLabel;
+	[Export] public HSlider MaxStaticRocksSlider;
+	[Export] public Label MaxStaticRocksLabel;
+	[Export] public CheckButton NeighborCullingCheck;
+	[Export] public CheckButton CrossSectionCheck;
+	[Export] public Button ConsolidateButton;
 
-	private Settings settings = Settings.GetSettings();
+	private Settings _settings = Settings.GetSettings();
+
+	private static UIController singleton = null;
+
+	public static UIController GetUIController()
+	{
+		if (singleton == null)
+		{
+			throw new Exception("UIController singleton not initialized yet");
+		}
+		return singleton;
+	}
 
 	// Handle signals
 	private void OnRealizationRadiusChanged(double value)
 	{
-		settings.RealizationRadius = (float) value;
-		_realizationRadiusLabel.Text = $"Realization Radius: {value:F0}m";
+		_settings.RealizationRadius = (float) value;
+		RealizationRadiusLabel.Text = $"Realization Radius: {value:F0}m";
 	}
 
 	private void OnMaxStaticRocksChanged(double value)
 	{
-		settings.MaxStaticRocks = (int) value;
-		_maxStaticRocksLabel.Text = $"Max Static Rocks: {settings.MaxStaticRocks}";
+		_settings.MaxStaticRocks = (int) value;
+		MaxStaticRocksLabel.Text = $"Max Static Rocks: {_settings.MaxStaticRocks}";
 	}
 
 	private void OnNeighborCullingChanged(bool toggled)
 	{
-		settings.NeighborCulling = toggled;
+		_settings.NeighborCulling = toggled;
 	}
 
 	private void OnCrossSectionChanged(bool toggled)
 	{
-		settings.CrossSection = toggled;
-	}
-
-	private void OnConsolidate()
-	{
-		settings.NeedsConsolidation = true;
+		_settings.CrossSection = toggled;
 	}
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
+		singleton = this;
+
 		// Connect signals
-		_realizationRadiusSlider.ValueChanged += OnRealizationRadiusChanged;
-		_maxStaticRocksSlider.ValueChanged += OnMaxStaticRocksChanged;
-		_neighborCullingCheck.Toggled += OnNeighborCullingChanged;
-		_crossSectionCheck.Toggled += OnCrossSectionChanged;
-		_consolidateButton.Pressed += OnConsolidate;
+		RealizationRadiusSlider.ValueChanged += OnRealizationRadiusChanged;
+		MaxStaticRocksSlider.ValueChanged += OnMaxStaticRocksChanged;
+		NeighborCullingCheck.Toggled += OnNeighborCullingChanged;
+		CrossSectionCheck.Toggled += OnCrossSectionChanged;
+		//ConsolidateButton.Pressed += OnConsolidate; // UIController does not need to connect to this
+
+		// Fill in initial values
+		OnRealizationRadiusChanged(RealizationRadiusSlider.Value);
+		OnMaxStaticRocksChanged(MaxStaticRocksSlider.Value);
+		OnNeighborCullingChanged(false); // For some reason check buttons have a bug where the first time they're read they're true
+		OnCrossSectionChanged(false);
 	}
 
 	private void GenerateDebugText()
 	{
-		Dictionary<string, string> debugInfo = settings.DebugInfo;
+		Dictionary<string, string> debugInfo = _settings.DebugInfo;
+		GD.Print($"{debugInfo["VisitedNodes"]}, {debugInfo["NeighborChecks"]}, {debugInfo["VisibleMeshes"]}");
+		GD.Print("UIController");
+		GD.Print(Settings.GetSettings());
+		GD.Print(debugInfo);
 		List<string> lines = new List<string>();
 
 		// FPS and camera
 		lines.Add($"FPS: {Engine.GetFramesPerSecond()}");
-		if (debugInfo.ContainsKey("CameraPos")) lines.Add(debugInfo["CameraPos"]);
+		if (debugInfo.TryGetValue("CameraPos", out string cameraPos)) lines.Add($"Camera: {cameraPos}");
+		if (debugInfo.TryGetValue("CameraDist", out string cameraDist)) lines.Add($"Distance: {cameraDist}");
 		lines.Add("---");
 
 		// Timing info
-		if (debugInfo.ContainsKey("OctreeTime")) lines.Add($"Octree: {debugInfo["OctreeTime"]}");
-		if (debugInfo.ContainsKey("MeshTime")) lines.Add($"Meshes: {debugInfo["MeshTime"]}");
-		if (debugInfo.ContainsKey("RenderTime")) lines.Add($"Render: {debugInfo["RenderTime"]}");
+		if (debugInfo.TryGetValue("OctreeTime", out string octreeTime)) lines.Add($"Octree: {octreeTime}");
+		if (debugInfo.TryGetValue("MeshTime", out string meshTime)) lines.Add($"Meshes: {meshTime}");
+		// Engine.GetLastRenderTime()?
+		lines.Add($"Render: ??? ms");
 		lines.Add("---");
 
 		// Traversal
-		if (debugInfo.ContainsKey("VisitedNodes")) lines.Add($"Visited Nodes: {debugInfo["VisitedNodes"]}");
-		if (debugInfo.ContainsKey("NeighborChecks")) lines.Add($"Neighbor Checks: {debugInfo["NeighborChecks"]}");
-		if (debugInfo.ContainsKey("VisibleMeshes")) lines.Add($"Visible Meshes: {debugInfo["VisibleMeshes"]}");
+		if (debugInfo.TryGetValue("VisitedNodes", out string visitedNodes)) lines.Add($"Visited Nodes: {visitedNodes}");
+		if (debugInfo.TryGetValue("NeighborChecks", out string neighborChecks)) lines.Add($"Neighbor Checks: {neighborChecks}");
+		if (debugInfo.TryGetValue("VisibleMeshes", out string visibleMeshes)) lines.Add($"Visible Meshes: {visibleMeshes}");
 		lines.Add("---");
 
 		// Meshes
-		if (debugInfo.ContainsKey("MultiMeshCount")) lines.Add($"MultiMesh: {debugInfo["MultiMeshCount"]}");
-		if (debugInfo.ContainsKey("StaticCount")) lines.Add($"Static: {debugInfo["StaticCount"]}");
-		if (debugInfo.ContainsKey("RigidCount")) lines.Add($"Rigid: {debugInfo["RigidCount"]}");
+		if (debugInfo.TryGetValue("MultiMeshCount", out string multiMeshCount)) lines.Add($"MultiMesh: {multiMeshCount}");
+		if (debugInfo.TryGetValue("StaticCount", out string staticCount)) lines.Add($"Static: {staticCount}");
+		if (debugInfo.TryGetValue("RigidCount", out string rigidCount)) lines.Add($"Rigid: {rigidCount}");
 		lines.Add("---");
 
 		// Materials
-		if (debugInfo.ContainsKey("RockCount")) lines.Add($"Rock: {debugInfo["RockCount"]}");
-		if (debugInfo.ContainsKey("IceCount")) lines.Add($"Ice: {debugInfo["IceCount"]}");
-		if (debugInfo.ContainsKey("MetalCount")) lines.Add($"Metal: {debugInfo["MetalCount"]}");
+		if (debugInfo.TryGetValue("RockCount", out string rockCount)) lines.Add($"Rock: {rockCount}");
+		if (debugInfo.TryGetValue("IceCount", out string iceCount)) lines.Add($"Ice: {iceCount}");
+		if (debugInfo.TryGetValue("MetalCount", out string metalCount)) lines.Add($"Metal: {metalCount}");
 
-		settings.DebugText = string.Join("\n", lines);
+		_settings.DebugText = string.Join("\n", lines);
 	}
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -118,6 +138,6 @@ public partial class UIController : Control
 	public override void _Process(double delta)
 	{
 		GenerateDebugText();
-		_debugLabel.Text = settings.DebugText;
+		DebugLabel.Text = _settings.DebugText;
 	}
 }

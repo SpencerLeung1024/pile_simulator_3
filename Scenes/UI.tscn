@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://eyqm23m4wlbm" path="res://Scripts/UIController.cs" id="1_w371h"]
 
-[node name="UI" type="Control" unique_id=1472228808]
+[node name="UI" type="Control" unique_id=1472228808 node_paths=PackedStringArray("DebugLabel", "RealizationRadiusSlider", "RealizationRadiusLabel", "MaxStaticRocksSlider", "MaxStaticRocksLabel", "NeighborCullingCheck", "CrossSectionCheck", "ConsolidateButton")]
 process_priority = 999
 layout_mode = 3
 anchors_preset = 15
@@ -11,6 +11,14 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_w371h")
+DebugLabel = NodePath("RichTextLabel")
+RealizationRadiusSlider = NodePath("VBoxBottomRight/RealizationRadiusSlider")
+RealizationRadiusLabel = NodePath("VBoxBottomRight/RealizationRadiusLabel")
+MaxStaticRocksSlider = NodePath("VBoxBottomRight/MaxStaticRocksSlider")
+MaxStaticRocksLabel = NodePath("VBoxBottomRight/MaxStaticRocksLabel")
+NeighborCullingCheck = NodePath("VBoxBottomRight/NeighborCullingCheck")
+CrossSectionCheck = NodePath("VBoxBottomRight/CrossSectionCheck")
+ConsolidateButton = NodePath("VBoxBottomRight/ConsolidateButton")
 
 [node name="RichTextLabel" type="RichTextLabel" parent="." unique_id=1057721705]
 layout_mode = 0
@@ -20,6 +28,7 @@ offset_right = 260.0
 offset_bottom = 562.0
 text = "FPS: 42
 (123.45, 234.56, 345.67)
+Distance: 456.78 m
 ---
 Octree: 12.34 ms
 Meshes: 23.45 ms
@@ -30,7 +39,7 @@ Neighbor Checks: 123456
 Visible Meshes: 12345
 ---
 MultiMesh: 123
-Static: 456
+Static: 456 / 10000
 Rigid: 789
 ---
 Rock: 123
@@ -38,46 +47,49 @@ Ice: 456
 Metal: 789"
 fit_content = true
 
-[node name="VBoxBottomLeft" type="VBoxContainer" parent="." unique_id=294448368]
+[node name="VBoxBottomRight" type="VBoxContainer" parent="." unique_id=294448368]
 layout_mode = 1
-anchors_preset = 2
+anchors_preset = 3
+anchor_left = 1.0
 anchor_top = 1.0
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 10.0
-offset_top = -100.0
-offset_right = 260.0
+offset_left = -260.0
+offset_top = -205.0
+offset_right = -10.0
 offset_bottom = -10.0
+grow_horizontal = 0
 grow_vertical = 0
 
-[node name="ConsolidateButton" type="Button" parent="VBoxBottomLeft" unique_id=1784392229]
+[node name="ConsolidateButton" type="Button" parent="VBoxBottomRight" unique_id=1784392229]
 layout_mode = 2
 text = "Consolidate"
 
-[node name="CrossSectionCheck" type="CheckButton" parent="VBoxBottomLeft" unique_id=1286608618]
+[node name="CrossSectionCheck" type="CheckButton" parent="VBoxBottomRight" unique_id=1286608618]
 layout_mode = 2
 text = "Show Cross-Section
 "
 
-[node name="NeighborCullingCheck" type="CheckButton" parent="VBoxBottomLeft" unique_id=1111111111]
+[node name="NeighborCullingCheck" type="CheckButton" parent="VBoxBottomRight" unique_id=1111111111]
 layout_mode = 2
 text = "Neighbor Culling"
 
-[node name="MaxStaticRocksLabel" type="Label" parent="VBoxBottomLeft" unique_id=-961633963]
+[node name="MaxStaticRocksLabel" type="Label" parent="VBoxBottomRight" unique_id=-961633963]
 layout_mode = 2
 text = "Max Static Rocks: 10000"
 
-[node name="MaxStaticRocksSlider" type="HSlider" parent="VBoxBottomLeft" unique_id=-2072745074]
+[node name="MaxStaticRocksSlider" type="HSlider" parent="VBoxBottomRight" unique_id=-2072745074]
 layout_mode = 2
 min_value = 1000.0
 max_value = 100000.0
 step = 1000.0
 value = 10000.0
 
-[node name="RealizationRadiusLabel" type="Label" parent="VBoxBottomLeft" unique_id=1234567890]
+[node name="RealizationRadiusLabel" type="Label" parent="VBoxBottomRight" unique_id=1234567890]
 layout_mode = 2
 text = "Realization Radius: 50m"
 
-[node name="RealizationRadiusSlider" type="HSlider" parent="VBoxBottomLeft" unique_id=482351576]
+[node name="RealizationRadiusSlider" type="HSlider" parent="VBoxBottomRight" unique_id=482351576]
 layout_mode = 2
 min_value = 10.0
 max_value = 200.0
