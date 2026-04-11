@@ -47,6 +47,13 @@ public class OctreeNode
     // This is probably gonna result in a mishap in the future but:
     // 0xff [11111111] is a special value meaning "not yet determined"
     // The culling check uses it to fill in the ExposedFaces field so it doesn't have to do expensive GetNeighbors calls in the future
+    public bool IsTrulyEnclosed
+    {
+        get
+        {
+            return IsTrulySolid && ExposedFaces == 0x00;
+        }
+    }
     
 
     public OctreeNode(Vector3 center, int height, MaterialEnum material, bool mixed, byte exposedFaces)
@@ -266,9 +273,9 @@ public class Octree
 
             visitedNodes++;
 
-            // Skip truly empty or truly solid nodes that are not final
+            // Skip truly empty or truly enclosed nodes that are not final
             // These must be truly empty (and render nothing) or enclosed deep within the asteroid (and are culled)
-            if (!node.Mixed && !node.IsRealVoxel)
+            if ((node.IsTrulyEmpty || node.IsTrulyEnclosed) && !node.IsRealVoxel)
             {
                 continue;
             }
