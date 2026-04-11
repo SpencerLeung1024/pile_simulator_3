@@ -29,6 +29,13 @@ public class AsteroidGenerator
             return Radius + MaxHeight;
         }
     }
+    public float MinRadius
+    {
+        get
+        {
+            return Radius - MaxHeight;
+        }
+    }
 
     public void InitializeNoise()
     {

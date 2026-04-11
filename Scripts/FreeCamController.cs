@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 
 public partial class FreeCamController : Camera3D
 {
@@ -17,15 +18,11 @@ public partial class FreeCamController : Camera3D
 	private bool _mouseCaptured = false;
 	private Vector2 _mouseDelta = Vector2.Zero;
 
-	// Cross-section cut state
-	private bool _crossSectionEnabled = false;
-
-	// UI reference
-	private RichTextLabel _debugLabel;
-	private CheckButton _crossSectionCheck;
-
-	// Asteroid reference for toggling cross-section
-	private Asteroid _asteroid;
+	private void PushDebugInfo()
+	{
+		Dictionary<string, string> debugInfo = Settings.GetSettings().DebugInfo;
+		debugInfo["CameraPos"] = $"({GlobalPosition.X:F2}, {GlobalPosition.Y:F2}, {GlobalPosition.Z:F2})";
+	}
 
 	public override void _Ready()
 	{
@@ -34,22 +31,7 @@ public partial class FreeCamController : Camera3D
 		// Look toward origin initially
 		LookAt(Vector3.Zero, Vector3.Up);
 
-		// Find the UI debug label and cross-section toggle
-		var world = GetParent();
-		if (world != null)
-		{
-			var ui = world.GetNodeOrNull<Control>("UI");
-			if (ui != null)
-			{
-				_debugLabel = ui.GetNodeOrNull<RichTextLabel>("RichTextLabel");
-				_crossSectionCheck = ui.GetNodeOrNull<CheckButton>("CrossSectionCheck");
-			}
-
-			// Get asteroid reference
-			_asteroid = world.GetNodeOrNull<Asteroid>("Asteroid");
-		}
-
-		UpdateDebugDisplay();
+		PushDebugInfo();
 	}
 
 	public override void _Input(InputEvent @event)
@@ -60,15 +42,6 @@ public partial class FreeCamController : Camera3D
 			if (_mouseCaptured)
 			{
 				ReleaseMouse();
-			}
-		}
-
-		// C key to toggle cross-section cut
-		if (@event is InputEventKey keyEvent && keyEvent.Pressed && !keyEvent.Echo)
-		{
-			if (keyEvent.Keycode == Key.C)
-			{
-				ToggleCrossSectionCut();
 			}
 		}
 
@@ -120,25 +93,7 @@ public partial class FreeCamController : Camera3D
 		HandleMovement(delta);
 
 		// Update debug display
-		UpdateDebugDisplay();
-	}
-
-	private void ToggleCrossSectionCut()
-	{
-		_crossSectionEnabled = !_crossSectionEnabled;
-
-		if (_asteroid != null)
-		{
-			_asteroid.SetCrossSectionCut(_crossSectionEnabled);
-		}
-
-		// Update UI checkbox to match
-		if (_crossSectionCheck != null)
-		{
-			_crossSectionCheck.ButtonPressed = _crossSectionEnabled;
-		}
-
-		GD.Print($"Cross-section cut toggled: {(_crossSectionEnabled ? "enabled" : "disabled")}");
+		PushDebugInfo();
 	}
 
 	private void CaptureMouse()
@@ -245,31 +200,6 @@ public partial class FreeCamController : Camera3D
 			velocity = velocity.Normalized() * speed;
 			Translate(velocity * (float)delta);
 		}
-	}
-
-	private void UpdateDebugDisplay()
-	{
-		if (_debugLabel == null) return;
-
-		Vector3 pos = GlobalPosition;
-		float distance = pos.DistanceTo(Vector3.Zero);
-
-		string text = $"FPS: {Engine.GetFramesPerSecond()}\n";
-		text += $"({pos.X:F2}, {pos.Y:F2}, {pos.Z:F2})\n";
-		text += $"Distance: {distance:F1} m\n";
-		text += $"Speed: {_currentSpeed:F1} m/s\n";
-		text += $"Mouse: {(_mouseCaptured ? "Captured" : "Free")}\n";
-		text += $"Cut: {(_crossSectionEnabled ? "ON" : "OFF")} (Press C)\n";
-		text += "---\n";
-		text += "MultiMesh: 0\n";
-		text += "Static: 0\n";
-		text += "Rigid: 0\n";
-		text += "---\n";
-		text += "Rock: 0\n";
-		text += "Ice: 0\n";
-		text += "Metal: 0";
-
-		_debugLabel.Text = text;
 	}
 
 	public override void _ExitTree()
