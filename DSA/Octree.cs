@@ -47,13 +47,6 @@ public class OctreeNode
     // This is probably gonna result in a mishap in the future but:
     // 0xff [11111111] is a special value meaning "not yet determined"
     // The culling check uses it to fill in the ExposedFaces field so it doesn't have to do expensive GetNeighbors calls in the future
-    public bool IsTrulyEnclosed
-    {
-        get
-        {
-            return IsTrulySolid && ExposedFaces == 0x00;
-        }
-    }
     
 
     public OctreeNode(Vector3 center, int height, MaterialEnum material, bool mixed, byte exposedFaces)
@@ -264,134 +257,142 @@ public class Octree
         
         // Keep track of paths
         int visitedNodes = 0;
-            int thetaPassed = 0; // In Python this wouldn't work but in C# I can use whitespace for whatever I want
-                int thetaEmpty = 0;
-                int thetaSolid = 0;
-            int thetaFailed = 0;
-                int traversedEmpty = 0;
-                int traversedSolid = 1; // We only increment this when the parent handles a child. The root is never handled by any parent, but its center is the center of the asteroid so it is solid
-                int neighborChecks = 0;
-                    int enclosed = 0;
-                    int exposed = 1; // The root has all 6 sides facing space
-                int leafNodes = 0;
+            int leafNodes = 0; // In Python this wouldn't work but in C# I can use whitespace for whatever I want
                 int leafEmpty = 0;
                 int leafSolid = 0;
+                    int leafEnclosed = 0;
+                    int leafExposed = 0;
+            int internalNodes = 0;
                 int trulyEmpty = 0;
+                int trulySolid = 0;
+                    int solidEnclosed = 0;
+                    int solidExposed = 0;
+                int thetaPassed = 0;
+                    int thetaEmpty = 0;
+                    int thetaSolid = 0;
+                        int thetaEnclosed = 0;
+                        int thetaExposed = 0;
+                int thetaFailed = 0;
         
         stack.Push(Root);
 
+        // Rewrite 3: Do the neighbor culling check at the end of the paths, rather than grouping them all in a node.Material != MaterialEnum.Empty at the beginning
+        // This lets the debug info track if a leaf, truly solid, or possibly solid node triggered the check
+        // Also move leaf processing back into the main loop, rather than getting their height 1 parent to handle them
+        // Getting information (material, etc.) from a leaf will require a pointer dereference anyways, unless a future rewrite stores leaf information in the 64 bits of children[i]
         while (stack.Count > 0)
         {
             OctreeNode node = stack.Pop();
-
             visitedNodes++;
 
-            // Rewritten so that if we're processing a node on the stack, it must belong to one of two cases
-            // The early exit checks on children are now done by the parent
-
-            float nodeTheta = node.Size / queryPos.DistanceTo(node.Center);
-            if (nodeTheta < theta) // Case 1: This node is far enough away to approximate itself
+            if (node.IsRealVoxel)
             {
-                thetaPassed++;
-
-                // In the rewrite, this path has similar invariants to the leaf node case
-                // node.Material may be MaterialEnum.Empty
-                // but GetExposedFaces(node) was set by the parent and is guaranteed to != 0x00 if neighborCulling
-                if (node.Material != MaterialEnum.Empty) // This node approximates an empty region. We don't care about any bits that far away so we can skip it
+                leafNodes++;
+                if (node.Material == MaterialEnum.Empty)
                 {
-                    thetaSolid++;
-                    result.Add(node);
+                    leafEmpty++;
                 }
                 else
                 {
-                    thetaEmpty++;
+                    leafSolid++;
+                    // We're gonna have to use the same neighbor culling logic three times
+                    // Hopefully this doesn't blow up the icache when turned into machine code
+                    byte exposedFaces = neighborCulling ? GetExposedFaces(node) : (byte)0x3f; // If neighbor culling is off, treat all faces as exposed
+                    if (exposedFaces == 0x00)
+                    {
+                        leafEnclosed++;
+                    }
+                    else
+                    {
+                        leafExposed++;
+                        result.Add(node);
+                    }
                 }
             }
-            else // Case 2: We need to explore children
+            else
             {
-                thetaFailed++;
-
-                // Note: Nodes approximating an empty region (because their center is empty according to the generator) may contain descendants with real material
-                if (node.Children == null) // Realize children on demand
+                internalNodes++;
+                if (node.IsTrulyEmpty)
                 {
-                    RealizeChildren(node);
+                    trulyEmpty++;
+                    continue; // Don't explore truly empty nodes
                 }
-                for (int i = 0; i < 8; i++)
+                else if (node.IsTrulySolid)
                 {
-                    OctreeNode child = node.Children[i];
-                    bool isEmpty = child.Material == MaterialEnum.Empty; // Store in a variable to save on gets
-                    if (isEmpty)
+                    trulySolid++;
+                    byte exposedFaces = neighborCulling ? GetExposedFaces(node) : (byte)0x3f;
+                    if (exposedFaces == 0x00)
                     {
-                        traversedEmpty++;
+                        solidEnclosed++;
+                        continue; // This node and its children will not be visible from the outside
                     }
                     else
                     {
-                        traversedSolid++;
+                        solidExposed++;
+                        // But do not add this node. We don't know if this node is close enough that we want to break it apart into children
+                        // The below checks will handle that, so proceed normally
                     }
-                    
-                    // If neighborCulling and this is solid, do a neighbor check
-                    if (neighborCulling && !isEmpty)
+                }
+                float nodeTheta = node.Size / queryPos.DistanceTo(node.Center);
+                if (nodeTheta < theta)
+                {
+                    thetaPassed++;
+                    if (node.Material == MaterialEnum.Empty)
                     {
-                        neighborChecks++;
-                        byte exposedFaces = GetExposedFaces(child);
+                        thetaEmpty++;
+                    }
+                    else
+                    {
+                        thetaSolid++;
+                        byte exposedFaces = neighborCulling ? GetExposedFaces(node) : (byte)0x3f;
                         if (exposedFaces == 0x00)
                         {
-                            enclosed++;
-                            continue; // Skip this child and its descendants entirely
+                            thetaEnclosed++;
                         }
                         else
                         {
-                            exposed++;
+                            thetaExposed++;
+                            result.Add(node);
                         }
                     }
-
-                    // If the child is a leaf node, add it here instead of pushing it on the stack
-                    if (child.IsRealVoxel)
+                }
+                else
+                {
+                    thetaFailed++;
+                    if (node.Children == null) // Realize children on demand. This is safe here because if this was a leaf node, it would have gone to the path above
                     {
-                        leafNodes++;
-
-                        if (isEmpty)
-                        {
-                            leafEmpty++;
-                        }
-                        else
-                        {
-                            leafSolid++;
-                            visitedNodes++; // Count this as visited although we put it here to reduce stack usage
-                            result.Add(child);
-                        }
+                        RealizeChildren(node);
                     }
-                    else
+                    for (int i = 0; i < 8; i++) // Stack doesn't have AddRange so we need to do our own loop
                     {
-                        if (child.IsTrulyEmpty) // Don't explore truly empty nodes
-                        {
-                            trulyEmpty++;
-                        }
-                        else
-                        {
-                            // This child node may have solid descendants, so we need to explore it
-                            stack.Push(child);
-                        }
+                        stack.Push(node.Children[i]);
                     }
                 }
             }
         }
 
-        int allEarlyExit = thetaEmpty + enclosed + leafEmpty + trulyEmpty;
+        int terminusEmpty = leafEmpty + trulyEmpty + thetaEmpty;
+        int terminusSolid = leafSolid + trulySolid + thetaSolid;
+        int terminusEnclosed = leafEnclosed + solidEnclosed + thetaEnclosed;
+        int terminusExposed = leafExposed + thetaExposed; // solidExposed is not a terminal path
 
         Dictionary<string, string> debugInfo = Settings.GetSettings().DebugInfo;
-        // In the rewrite, format TraversalLines here
-        debugInfo["TraversalLines"] = $@"Visited Nodes: {visitedNodes}
-  Theta Passed: {thetaPassed}
-    Empty: {thetaEmpty} Solid: {thetaSolid}
-  Theta Failed: {thetaFailed}
-    Empty: {traversedEmpty} Solid: {traversedSolid}
-    Neighbor Checks: {neighborChecks}
-      Enclosed: {enclosed} Exposed: {exposed}
-    Leaf Nodes: {leafNodes}
-      Empty: {leafEmpty} Solid: {leafSolid}
+        // This is changed often so format TraversalLines here instead of formatting in UIController.cs
+        debugInfo["TraversalLines"] = $@"Visited: {visitedNodes}
+  Leaf: {leafNodes}
+    Empty: {leafEmpty} Solid: {leafSolid}
+      Enclosed: {leafEnclosed} Exposed: {leafExposed}
+  Internal: {internalNodes}
     Truly Empty: {trulyEmpty}
-All Early Exit: {allEarlyExit}";
+    Truly Solid: {trulySolid}
+      Enclosed: {solidEnclosed} Exposed*: {solidExposed}
+    Theta Passed: {thetaPassed}
+      Empty: {thetaEmpty} Solid: {thetaSolid}
+        Enclosed: {thetaEnclosed} Exposed: {thetaExposed}
+    Theta Failed: {thetaFailed}
+Terminus:
+  Empty: {terminusEmpty} Solid: {terminusSolid}
+    Enclosed: {terminusEnclosed} Exposed: {terminusExposed}".Replace(System.Environment.NewLine, "\n"); // RichTextLabel handles \r\n fine, but GD.Print produces two newlines
 
         return result;
     }

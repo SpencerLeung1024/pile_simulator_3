@@ -1,0 +1,208 @@
+Base parameters are 10 km asteroid, 50 m realization radius, neighbor culling, no consolidation
+
+Base:
+FPS: 144
+Camera: (-4200.00, 1550.00, 8950.00)
+Distance: 10007.25 m
+---
+Octree: 1607.00 ms
+Meshes: 338.30 ms
+Render: ??? ms
+---
+Visited: 34511169
+  Leaf: 4191872
+    Empty: 2331179 Solid: 1860693
+      Enclosed: 1832755 Exposed: 27938
+  Internal: 30319297
+    Truly Empty: 80589
+    Truly Solid: 2440
+      Enclosed: 2440 Exposed*: 0
+    Theta Passed: 25922372
+      Empty: 14924522 Solid: 10997850
+        Enclosed: 10839490 Exposed: 158360
+    Theta Failed: 4313896
+Terminus:
+  Empty: 17336290 Solid: 12860983
+    Enclosed: 12674685 Exposed: 186298
+---
+MultiMesh: 176298
+Static: 10000 / 10000
+Rigid: 0
+---
+Rock: 0
+Ice: 10000
+Metal: 0
+
+no neighbor culling:
+FPS: 11
+Camera: (-4200.00, 1550.00, 8950.00)
+Distance: 10007.25 m
+---
+Octree: 1646.70 ms
+Meshes: 8208.67 ms
+Render: ??? ms
+---
+Visited: 34524097
+  Leaf: 4191872
+    Empty: 2331179 Solid: 1860693
+      Enclosed: 0 Exposed: 1860693
+  Internal: 30332225
+    Truly Empty: 80589
+    Truly Solid: 15368
+      Enclosed: 0 Exposed*: 15368
+    Theta Passed: 25936124
+      Empty: 14924522 Solid: 11011602
+        Enclosed: 0 Exposed: 11011602
+    Theta Failed: 4315512
+Terminus:
+  Empty: 17336290 Solid: 12887663
+    Enclosed: 0 Exposed: 12872295
+---
+MultiMesh: 12862295
+Static: 10000 / 10000
+Rigid: 0
+---
+Rock: 0
+Ice: 10000
+Metal: 0
+
+Sweep realization radius
+
+40 m realization radius:
+FPS: 144
+Camera: (-4200.00, 1550.00, 8950.00)
+Distance: 10007.25 m
+---
+Octree: 885.22 ms
+Meshes: 69.99 ms
+Render: ??? ms
+---
+Visited: 18396841
+  Leaf: 2144768
+    Empty: 1220840 Solid: 923928
+      Enclosed: 906125 Exposed: 17803
+  Internal: 16252073
+    Truly Empty: 50062
+    Truly Solid: 1482
+      Enclosed: 1482 Exposed*: 0
+    Theta Passed: 13900924
+      Empty: 7985077 Solid: 5915847
+        Enclosed: 5808050 Exposed: 107797
+    Theta Failed: 2299605
+Terminus:
+  Empty: 9255979 Solid: 6841257
+    Enclosed: 6715657 Exposed: 125600
+---
+MultiMesh: 115600
+Static: 10000 / 10000
+Rigid: 0
+---
+Rock: 0
+Ice: 10000
+Metal: 0
+
+30 m realization radius:
+FPS: 144
+Camera: (-4200.00, 1550.00, 8950.00)
+Distance: 10007.25 m
+---
+Octree: 427.97 ms
+Meshes: 38.68 ms
+Render: ??? ms
+---
+Visited: 8134729
+  Leaf: 904832
+    Empty: 534960 Solid: 369872
+      Enclosed: 359925 Exposed: 9947
+  Internal: 7229897
+    Truly Empty: 28221
+    Truly Solid: 464
+      Enclosed: 464 Exposed*: 0
+    Theta Passed: 6184371
+      Empty: 3536857 Solid: 2647514
+        Enclosed: 2585104 Exposed: 62410
+    Theta Failed: 1016841
+Terminus:
+  Empty: 4100038 Solid: 3017850
+    Enclosed: 2945493 Exposed: 72357
+---
+MultiMesh: 62410
+Static: 9947 / 10000
+Rigid: 0
+---
+Rock: 0
+Ice: 9947
+Metal: 0
+
+20 m realization radius:
+FPS: 144
+Camera: (-4200.00, 1550.00, 8950.00)
+Distance: 10007.25 m
+---
+Octree: 154.79 ms
+Meshes: 36.42 ms
+Render: ??? ms
+---
+Visited: 2581441
+  Leaf: 268416
+    Empty: 170443 Solid: 97973
+      Enclosed: 93650 Exposed: 4323
+  Internal: 2313025
+    Truly Empty: 12948
+    Truly Solid: 284
+      Enclosed: 284 Exposed*: 0
+    Theta Passed: 1977113
+      Empty: 1134168 Solid: 842945
+        Enclosed: 812934 Exposed: 30011
+    Theta Failed: 322680
+Terminus:
+  Empty: 1317559 Solid: 941202
+    Enclosed: 906868 Exposed: 34334
+---
+MultiMesh: 30011
+Static: 4323 / 10000
+Rigid: 0
+---
+Rock: 0
+Ice: 4323
+Metal: 0
+
+10 m realization radius:
+FPS: 144
+Camera: (-4200.00, 1550.00, 8950.00)
+Distance: 10007.25 m
+---
+Octree: 23.20 ms
+Meshes: 5.22 ms
+Render: ??? ms
+---
+Visited: 359449
+  Leaf: 33792
+    Empty: 25665 Solid: 8127
+      Enclosed: 7171 Exposed: 956
+  Internal: 325657
+    Truly Empty: 3433
+    Truly Solid: 47
+      Enclosed: 47 Exposed*: 0
+    Theta Passed: 277246
+      Empty: 160815 Solid: 116431
+        Enclosed: 108148 Exposed: 8283
+    Theta Failed: 44931
+Terminus:
+  Empty: 189913 Solid: 124605
+    Enclosed: 115366 Exposed: 9239
+---
+MultiMesh: 8283
+Static: 956 / 10000
+Rigid: 0
+---
+Rock: 0
+Ice: 956
+Metal: 0
+
+Sweep asteroid size
+
+2 km asteroid:
+500 m asteroid:
+100 m asteroid:
+20 m asteroid:

@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://eyqm23m4wlbm" path="res://Scripts/UIController.cs" id="1_w371h"]
 
-[node name="UI" type="Control" unique_id=1472228808 node_paths=PackedStringArray("DebugLabel", "RealizationRadiusSlider", "RealizationRadiusLabel", "MaxStaticRocksSlider", "MaxStaticRocksLabel", "NeighborCullingCheck", "CrossSectionCheck", "ConsolidateButton")]
+[node name="UI" type="Control" unique_id=1472228808 node_paths=PackedStringArray("DebugLabel", "DumpDebugButton", "RealizationRadiusSlider", "RealizationRadiusLabel", "MaxStaticRocksSlider", "MaxStaticRocksLabel", "NeighborCullingCheck", "CrossSectionCheck", "ConsolidateButton")]
 process_priority = 999
 layout_mode = 3
 anchors_preset = 15
@@ -11,7 +11,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_w371h")
-DebugLabel = NodePath("RichTextLabel")
+DebugLabel = NodePath("DebugLabel")
+DumpDebugButton = NodePath("DumpDebugButton")
 RealizationRadiusSlider = NodePath("VBoxBottomRight/RealizationRadiusSlider")
 RealizationRadiusLabel = NodePath("VBoxBottomRight/RealizationRadiusLabel")
 MaxStaticRocksSlider = NodePath("VBoxBottomRight/MaxStaticRocksSlider")
@@ -20,7 +21,7 @@ NeighborCullingCheck = NodePath("VBoxBottomRight/NeighborCullingCheck")
 CrossSectionCheck = NodePath("VBoxBottomRight/CrossSectionCheck")
 ConsolidateButton = NodePath("VBoxBottomRight/ConsolidateButton")
 
-[node name="RichTextLabel" type="RichTextLabel" parent="." unique_id=1057721705]
+[node name="DebugLabel" type="RichTextLabel" parent="." unique_id=1057721705]
 layout_mode = 0
 offset_left = 10.0
 offset_top = 10.0
@@ -44,6 +45,19 @@ Rock: 123
 Ice: 456
 Metal: 789"
 fit_content = true
+
+[node name="DumpDebugButton" type="Button" parent="." unique_id=944724719]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -41.0
+offset_right = 310.0
+offset_bottom = -10.0
+grow_vertical = 0
+text = "Dump Debug
+"
 
 [node name="VBoxBottomRight" type="VBoxContainer" parent="." unique_id=294448368]
 layout_mode = 1

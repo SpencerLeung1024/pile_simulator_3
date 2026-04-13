@@ -27,7 +27,7 @@ environment = SubResource("Environment_o3h3i")
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1949565711]
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1187229528]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4208, 1562, 8986)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4200, 1550, 8950)
 script = ExtResource("4_freecam")
 _baseSpeed = 50.0
 _minSpeed = 10.0

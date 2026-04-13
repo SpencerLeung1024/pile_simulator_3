@@ -28,6 +28,7 @@ public partial class UIController : Control
 	// Scene nodes
 	// These need to be public so other scripts can connect to signals from the UI elements
 	[Export] public RichTextLabel DebugLabel;
+	[Export] public Button DumpDebugButton;
 	[Export] public HSlider RealizationRadiusSlider;
 	[Export] public Label RealizationRadiusLabel;
 	[Export] public HSlider MaxStaticRocksSlider;
@@ -50,6 +51,10 @@ public partial class UIController : Control
 	}
 
 	// Handle signals
+	private void OnDumpDebug()
+	{
+		GD.Print(_settings.DebugText);
+	}
 	private void OnRealizationRadiusChanged(double value)
 	{
 		_settings.RealizationRadius = (float) value;
@@ -78,6 +83,7 @@ public partial class UIController : Control
 		singleton = this;
 
 		// Connect signals
+		DumpDebugButton.Pressed += OnDumpDebug;
 		RealizationRadiusSlider.ValueChanged += OnRealizationRadiusChanged;
 		MaxStaticRocksSlider.ValueChanged += OnMaxStaticRocksChanged;
 		NeighborCullingCheck.Toggled += OnNeighborCullingChanged;
