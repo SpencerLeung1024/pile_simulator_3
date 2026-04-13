@@ -26,6 +26,18 @@ I have removed Rubble Pile Simulator and Gridmap Pile Simulator to clean up the 
 - Outside this radius, octree nodes are shown with the multi mesh. Color can be rock or some other uniform color
 - No rigid rocks, gravity, or player modifications yet
 
+### Current Problems
+- It's too slow, even with a 13900H and RTX 4060 laptop
+- - I was hoping for r^2 * log2(r) as realization radius increases and log2(a) as asteroid radius increases
+- - r^2 because you need at least r^2 to represent the surface within the realization radius, and log2(r) for overhead
+- - The octree and meshes times bounce around depending on cache effects and the mood of my CPU
+- - The TraversalLines is deterministic, but it still doesn't fit my expectations of x^2, x^2 * log_2(x), or x^3
+- - Some of this is affected by the shape of the asteroid and the camera's specific location but a general trend should appear
+- Occasionally the neighbor check on larger LODs leaves holes
+- - Node A, height 1, representing a 2 x 2 x 2 m region, checks the Material of its height 1 neighbor nodes
+- - Due to how the asteroid generator works, an LOD internal node B may be !Material.Empty even if there exists children that are Material.Empty
+- - If B is within the realization radius and A isn't, there can be a visual gap seeing into A (which is Empty and not meshed) and into the asteroid
+
 ### Step 2: Static modifications
 
 ### Step 3: Rigid rocks
