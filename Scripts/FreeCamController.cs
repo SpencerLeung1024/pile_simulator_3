@@ -4,13 +4,13 @@ using System.Collections.Generic;
 
 public partial class FreeCamController : Camera3D
 {
-	// Movement settings
-	[Export] public float BaseSpeed { get; set; } = 50.0f;
-	[Export] public float MinSpeed { get; set; } = 10.0f;
-	[Export] public float MaxSpeed { get; set; } = 500.0f;
-	[Export] public float SpeedScrollMultiplier { get; set; } = 1.1f;
-	[Export] public float SprintMultiplier { get; set; } = 2.0f;
-	[Export] public float MouseSensitivity { get; set; } = 0.003f;
+	// Configuration
+    [Export] private float _baseSpeed;
+    [Export] private float _minSpeed;
+	[Export] private float _maxSpeed;
+	[Export] private float _speedScrollMultiplier;
+	[Export] private float _sprintMultiplier;
+	[Export] private float _mouseSensitivity;
 
 	// Current state
 	private float _currentSpeed;
@@ -43,7 +43,7 @@ public partial class FreeCamController : Camera3D
 	{
 		singleton = this;
 
-		_currentSpeed = BaseSpeed;
+		_currentSpeed = _baseSpeed;
 
 		// Look toward origin initially
 		LookAt(Vector3.Zero, Vector3.Up);
@@ -80,13 +80,13 @@ public partial class FreeCamController : Camera3D
 			// Mouse wheel for speed adjustment
 			if (mouseButton.ButtonIndex == MouseButton.WheelUp && mouseButton.Pressed)
 			{
-				_currentSpeed *= SpeedScrollMultiplier;
-				_currentSpeed = Mathf.Min(_currentSpeed, MaxSpeed);
+				_currentSpeed *= _speedScrollMultiplier;
+				_currentSpeed = Mathf.Min(_currentSpeed, _maxSpeed);
 			}
 			else if (mouseButton.ButtonIndex == MouseButton.WheelDown && mouseButton.Pressed)
 			{
-				_currentSpeed /= SpeedScrollMultiplier;
-				_currentSpeed = Mathf.Max(_currentSpeed, MinSpeed);
+				_currentSpeed /= _speedScrollMultiplier;
+				_currentSpeed = Mathf.Max(_currentSpeed, _minSpeed);
 			}
 		}
 
@@ -128,11 +128,11 @@ public partial class FreeCamController : Camera3D
 	private void RotateCamera(Vector2 delta)
 	{
 		// Rotate around Y axis (yaw) - left/right
-		RotateY(-delta.X * MouseSensitivity);
+		RotateY(-delta.X * _mouseSensitivity);
 
 		// Rotate around local X axis (pitch) - up/down
 		// We need to clamp pitch to avoid flipping
-		RotateObjectLocal(Vector3.Right, -delta.Y * MouseSensitivity);
+		RotateObjectLocal(Vector3.Right, -delta.Y * _mouseSensitivity);
 
 		// Clamp pitch to prevent camera flip
 		var transform = Transform;
@@ -143,7 +143,7 @@ public partial class FreeCamController : Camera3D
 		if (currentPitch > maxPitch || currentPitch < -maxPitch)
 		{
 			// Revert the pitch rotation if we went too far
-			RotateObjectLocal(Vector3.Right, delta.Y * MouseSensitivity);
+			RotateObjectLocal(Vector3.Right, delta.Y * _mouseSensitivity);
 		}
 	}
 
@@ -188,7 +188,7 @@ public partial class FreeCamController : Camera3D
 
 		// Sprint check
 		bool isShiftPressed = Input.IsKeyPressed(Key.Shift);
-		float speed = _currentSpeed * (isShiftPressed ? SprintMultiplier : 1.0f);
+		float speed = _currentSpeed * (isShiftPressed ? _sprintMultiplier : 1.0f);
 
 		// Calculate movement relative to camera orientation
 		Basis basis = Transform.Basis;

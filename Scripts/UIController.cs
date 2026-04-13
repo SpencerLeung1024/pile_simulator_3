@@ -62,14 +62,14 @@ public partial class UIController : Control
 		MaxStaticRocksLabel.Text = $"Max Static Rocks: {_settings.MaxStaticRocks}";
 	}
 
-	private void OnNeighborCullingChanged(bool toggled)
+	private void OnNeighborCullingChanged(bool value)
 	{
-		_settings.NeighborCulling = toggled;
+		_settings.NeighborCulling = value;
 	}
 
-	private void OnCrossSectionChanged(bool toggled)
+	private void OnCrossSectionChanged(bool value)
 	{
-		_settings.CrossSection = toggled;
+		_settings.CrossSection = value;
 	}
 
 	// Called when the node enters the scene tree for the first time.
@@ -87,17 +87,13 @@ public partial class UIController : Control
 		// Fill in initial values
 		OnRealizationRadiusChanged(RealizationRadiusSlider.Value);
 		OnMaxStaticRocksChanged(MaxStaticRocksSlider.Value);
-		OnNeighborCullingChanged(false); // For some reason check buttons have a bug where the first time they're read they're true
-		OnCrossSectionChanged(false);
+		OnNeighborCullingChanged(NeighborCullingCheck.ButtonPressed);
+		OnCrossSectionChanged(CrossSectionCheck.ButtonPressed);
 	}
 
 	private void GenerateDebugText()
 	{
 		Dictionary<string, string> debugInfo = _settings.DebugInfo;
-		GD.Print($"{debugInfo["VisitedNodes"]}, {debugInfo["NeighborChecks"]}, {debugInfo["VisibleMeshes"]}");
-		GD.Print("UIController");
-		GD.Print(Settings.GetSettings());
-		GD.Print(debugInfo);
 		List<string> lines = new List<string>();
 
 		// FPS and camera
@@ -114,9 +110,7 @@ public partial class UIController : Control
 		lines.Add("---");
 
 		// Traversal
-		if (debugInfo.TryGetValue("VisitedNodes", out string visitedNodes)) lines.Add($"Visited Nodes: {visitedNodes}");
-		if (debugInfo.TryGetValue("NeighborChecks", out string neighborChecks)) lines.Add($"Neighbor Checks: {neighborChecks}");
-		if (debugInfo.TryGetValue("VisibleMeshes", out string visibleMeshes)) lines.Add($"Visible Meshes: {visibleMeshes}");
+		if (debugInfo.TryGetValue("TraversalLines", out string traversalLines)) lines.Add(traversalLines); // Octree.cs will format this multiline string
 		lines.Add("---");
 
 		// Meshes

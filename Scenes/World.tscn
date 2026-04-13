@@ -27,7 +27,16 @@ environment = SubResource("Environment_o3h3i")
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1949565711]
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1187229528]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1000)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4208, 1562, 8986)
 script = ExtResource("4_freecam")
+_baseSpeed = 50.0
+_minSpeed = 10.0
+_maxSpeed = 500.0
+_speedScrollMultiplier = 1.1
+_sprintMultiplier = 2.0
+_mouseSensitivity = 0.003
 
 [node name="Asteroid" parent="." unique_id=580769386 instance=ExtResource("2_j0p05")]
+_radius = 10000.0
+_seed = 12345
+_cameraMoveThreshold = 10.0

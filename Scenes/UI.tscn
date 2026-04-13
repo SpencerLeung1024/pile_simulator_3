@@ -24,7 +24,7 @@ ConsolidateButton = NodePath("VBoxBottomRight/ConsolidateButton")
 layout_mode = 0
 offset_left = 10.0
 offset_top = 10.0
-offset_right = 260.0
+offset_right = 310.0
 offset_bottom = 562.0
 text = "FPS: 42
 (123.45, 234.56, 345.67)
@@ -32,11 +32,9 @@ Distance: 456.78 m
 ---
 Octree: 12.34 ms
 Meshes: 23.45 ms
-Render: 34.56 ms
+Render: ??? ms
 ---
-Visited Nodes: 123456789
-Neighbor Checks: 123456
-Visible Meshes: 12345
+Whatever Octree.cs says
 ---
 MultiMesh: 123
 Static: 456 / 10000
@@ -54,7 +52,7 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -260.0
+offset_left = -310.0
 offset_top = -205.0
 offset_right = -10.0
 offset_bottom = -10.0
@@ -72,6 +70,7 @@ text = "Show Cross-Section
 
 [node name="NeighborCullingCheck" type="CheckButton" parent="VBoxBottomRight" unique_id=1111111111]
 layout_mode = 2
+button_pressed = true
 text = "Neighbor Culling"
 
 [node name="MaxStaticRocksLabel" type="Label" parent="VBoxBottomRight" unique_id=-961633963]

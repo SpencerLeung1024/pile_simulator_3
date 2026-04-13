@@ -262,8 +262,21 @@ public class Octree
         Stack<OctreeNode> stack = new Stack<OctreeNode>();
         List<OctreeNode> result = new List<OctreeNode>();
         
+        // Keep track of paths
         int visitedNodes = 0;
-        int neighborChecks = 0;
+            int thetaPassed = 0; // In Python this wouldn't work but in C# I can use whitespace for whatever I want
+                int thetaEmpty = 0;
+                int thetaSolid = 0;
+            int thetaFailed = 0;
+                int traversedEmpty = 0;
+                int traversedSolid = 1; // We only increment this when the parent handles a child. The root is never handled by any parent, but its center is the center of the asteroid so it is solid
+                int neighborChecks = 0;
+                    int enclosed = 0;
+                    int exposed = 1; // The root has all 6 sides facing space
+                int leafNodes = 0;
+                int leafEmpty = 0;
+                int leafSolid = 0;
+                int trulyEmpty = 0;
         
         stack.Push(Root);
 
@@ -273,70 +286,112 @@ public class Octree
 
             visitedNodes++;
 
-            // Skip truly empty or truly enclosed nodes that are not final
-            // These must be truly empty (and render nothing) or enclosed deep within the asteroid (and are culled)
-            if ((node.IsTrulyEmpty || node.IsTrulyEnclosed) && !node.IsRealVoxel)
-            {
-                continue;
-            }
+            // Rewritten so that if we're processing a node on the stack, it must belong to one of two cases
+            // The early exit checks on children are now done by the parent
 
             float nodeTheta = node.Size / queryPos.DistanceTo(node.Center);
             if (nodeTheta < theta) // Case 1: This node is far enough away to approximate itself
             {
+                thetaPassed++;
+
+                // In the rewrite, this path has similar invariants to the leaf node case
+                // node.Material may be MaterialEnum.Empty
+                // but GetExposedFaces(node) was set by the parent and is guaranteed to != 0x00 if neighborCulling
                 if (node.Material != MaterialEnum.Empty) // This node approximates an empty region. We don't care about any bits that far away so we can skip it
                 {
-                    bool passedNeighborCheck = true;
-                    if (neighborCulling)
-                    {
-                        neighborChecks++;
-                        byte exposedFaces = GetExposedFaces(node);
-                        passedNeighborCheck = exposedFaces != 0x00;
-                    }
-                    if (passedNeighborCheck)
-                    {
-                        result.Add(node);
-                    }
+                    thetaSolid++;
+                    result.Add(node);
+                }
+                else
+                {
+                    thetaEmpty++;
                 }
             }
             else // Case 2: We need to explore children
             {
-                if (node.IsRealVoxel) // Case 2a: This is a leaf node and is a real voxel. There are no children to explore, so we have to use this node even though it's close
+                thetaFailed++;
+
+                // Note: Nodes approximating an empty region (because their center is empty according to the generator) may contain descendants with real material
+                if (node.Children == null) // Realize children on demand
                 {
-                    if (node.Material != MaterialEnum.Empty)
-                    {
-                        bool passedNeighborCheck = true;
-                        if (neighborCulling)
-                        {
-                            neighborChecks++;
-                            byte exposedFaces = GetExposedFaces(node);
-                            passedNeighborCheck = exposedFaces != 0x00;
-                        }
-                        if (passedNeighborCheck)
-                        {
-                            result.Add(node);
-                        }
-                    }
+                    RealizeChildren(node);
                 }
-                else // Case 2b: Proceed with children
+                for (int i = 0; i < 8; i++)
                 {
-                    // Note: Nodes approximating an empty region (because their center is empty according to the generator) may contain descendants with real material
-                    if (node.Children == null) // Realize children on demand
+                    OctreeNode child = node.Children[i];
+                    bool isEmpty = child.Material == MaterialEnum.Empty; // Store in a variable to save on gets
+                    if (isEmpty)
                     {
-                        RealizeChildren(node);
+                        traversedEmpty++;
                     }
-                    for (int i = 0; i < 8; i++)
+                    else
                     {
-                        stack.Push(node.Children[i]);
+                        traversedSolid++;
+                    }
+                    
+                    // If neighborCulling and this is solid, do a neighbor check
+                    if (neighborCulling && !isEmpty)
+                    {
+                        neighborChecks++;
+                        byte exposedFaces = GetExposedFaces(child);
+                        if (exposedFaces == 0x00)
+                        {
+                            enclosed++;
+                            continue; // Skip this child and its descendants entirely
+                        }
+                        else
+                        {
+                            exposed++;
+                        }
+                    }
+
+                    // If the child is a leaf node, add it here instead of pushing it on the stack
+                    if (child.IsRealVoxel)
+                    {
+                        leafNodes++;
+
+                        if (isEmpty)
+                        {
+                            leafEmpty++;
+                        }
+                        else
+                        {
+                            leafSolid++;
+                            visitedNodes++; // Count this as visited although we put it here to reduce stack usage
+                            result.Add(child);
+                        }
+                    }
+                    else
+                    {
+                        if (child.IsTrulyEmpty) // Don't explore truly empty nodes
+                        {
+                            trulyEmpty++;
+                        }
+                        else
+                        {
+                            // This child node may have solid descendants, so we need to explore it
+                            stack.Push(child);
+                        }
                     }
                 }
             }
-                
         }
 
+        int allEarlyExit = thetaEmpty + enclosed + leafEmpty + trulyEmpty;
+
         Dictionary<string, string> debugInfo = Settings.GetSettings().DebugInfo;
-        debugInfo["VisitedNodes"] = visitedNodes.ToString();
-        debugInfo["NeighborChecks"] = neighborChecks.ToString();
-        debugInfo["VisibleMeshes"] = result.Count.ToString();
+        // In the rewrite, format TraversalLines here
+        debugInfo["TraversalLines"] = $@"Visited Nodes: {visitedNodes}
+  Theta Passed: {thetaPassed}
+    Empty: {thetaEmpty} Solid: {thetaSolid}
+  Theta Failed: {thetaFailed}
+    Empty: {traversedEmpty} Solid: {traversedSolid}
+    Neighbor Checks: {neighborChecks}
+      Enclosed: {enclosed} Exposed: {exposed}
+    Leaf Nodes: {leafNodes}
+      Empty: {leafEmpty} Solid: {leafSolid}
+    Truly Empty: {trulyEmpty}
+All Early Exit: {allEarlyExit}";
 
         return result;
     }

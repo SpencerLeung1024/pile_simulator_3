@@ -9,6 +9,10 @@ I have removed Rubble Pile Simulator and Gridmap Pile Simulator to clean up the 
 - Put scripts that are bound to a Godot node in Scripts
 - Put scripts that operate on underlying game data in DSA
 - The Godot scene tree should merely reflect the underlying game data
+- Do not assign defaults to configuration in scripts for nodes. I will input them in the Godot editor
+- Do not search for scene nodes and references in _Ready(). I will assign them in the Godot editor
+- Fail early, fail loudly. Do not continue operating with the wrong information
+- This reduces boilerplate code and avoids bugs caused by a varaible having different values at different times
 
 ## Steps
 

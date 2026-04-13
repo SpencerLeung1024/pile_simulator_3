@@ -10,9 +10,9 @@ public partial class Asteroid : Node3D
     [Export] private MultiMeshInstance3D _multiMeshRock; // Far away approximations of octree nodes
 
     // Configuration
-    [Export] private float _radius = 500f;
-    [Export] private ulong _seed = 12345;
-    [Export] private float _cameraMoveThreshold = 10f; // Minimum camera movement to trigger update
+    [Export] private float _radius;
+    [Export] private ulong _seed;
+    [Export] private float _cameraMoveThreshold; // Minimum camera movement to trigger update
 
     // Internal state
     private Octree _octree;
@@ -57,12 +57,12 @@ public partial class Asteroid : Node3D
         _needsMultiMeshUpdate = true;
     }
 
-    private void OnNeighborCullingChanged(bool toggled)
+    private void OnNeighborCullingChanged(bool value)
     {
         _needsMultiMeshUpdate = true;
     }
 
-    private void OnCrossSectionChanged(bool toggled)
+    private void OnCrossSectionChanged(bool value)
     {
         _needsMultiMeshUpdate = true;
     }
