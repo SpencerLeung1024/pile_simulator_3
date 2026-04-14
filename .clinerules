@@ -12,7 +12,7 @@ I have removed Rubble Pile Simulator and Gridmap Pile Simulator to clean up the 
 - Do not assign defaults to configuration in scripts for nodes. I will input them in the Godot editor
 - Do not search for scene nodes and references in _Ready(). I will assign them in the Godot editor
 - Fail early, fail loudly. Do not continue operating with the wrong information
-- This reduces boilerplate code and avoids bugs caused by a varaible having different values at different times
+- This reduces boilerplate code and avoids bugs caused by a variable having different values at different times
 
 ## Steps
 
@@ -37,6 +37,18 @@ I have removed Rubble Pile Simulator and Gridmap Pile Simulator to clean up the 
 - - Node A, height 1, representing a 2 x 2 x 2 m region, checks the Material of its height 1 neighbor nodes
 - - Due to how the asteroid generator works, an LOD internal node B may be !Material.Empty even if there exists children that are Material.Empty
 - - If B is within the realization radius and A isn't, there can be a visual gap seeing into A (which is Empty and not meshed) and into the asteroid
+
+### So how do we explore the surface without exploring the volume?
+- GPT-5.4 and Opus 4.6 identified that the best function for visited nodes is r^3 * log2(a/r)
+- r varies only a bit: from 10 to 50, log2(a/r) varies from 9.97 to 7.64, resulting in the best power law being r^2.83
+- Truly empty and truly solid checks help, but are not enough to mitigate the fundamental problem that expanding a node produces 8 children
+- Clearly, there is some other algorithm that scales close to surface, not volume, otherwise Minecraft and Space Engineers wouldn't be possible
+- I can imagine an algorithm that:
+- - Drills down from the root to find an exposed node of the desired LOD size, acting as a seed
+- - Explores 27 neighbors and if they are also exposed, adds them to be explored
+- - This eventually checks 27*result.Count nodes
+- - There's a problem if the asteroid is disjoint (maybe by digging a slice through its entirety), and possibly other problems I haven't thought of yet
+- There might be a better algorithm used in practice that I don't know about
 
 ### Step 2: Static modifications
 
