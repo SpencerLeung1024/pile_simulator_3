@@ -45,8 +45,8 @@ I have removed Rubble Pile Simulator and Gridmap Pile Simulator to clean up the 
 - Clearly, there is some other algorithm that scales close to surface, not volume, otherwise Minecraft and Space Engineers wouldn't be possible
 - I can imagine an algorithm that:
 - - Drills down from the root to find an exposed node of the desired LOD size, acting as a seed
-- - Explores 27 neighbors and if they are also exposed, adds them to be explored
-- - This eventually checks 27*result.Count nodes
+- - Explores 26 neighbors and if they are also exposed, adds them to be explored
+- - This eventually checks 26*result.Count nodes
 - - There's a problem if the asteroid is disjoint (maybe by digging a slice through its entirety), and possibly other problems I haven't thought of yet
 - There might be a better algorithm used in practice that I don't know about
 
