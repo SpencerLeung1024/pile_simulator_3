@@ -3,5 +3,5 @@
 /android/
 
 # Archived reports
-#reports/traversal_lines/
-#reports/better_traversal/
+reports/traversal_lines/
+reports/better_traversal/
