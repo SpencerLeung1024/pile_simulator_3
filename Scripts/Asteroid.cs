@@ -73,6 +73,11 @@ public partial class Asteroid : Node3D
         _needsMultiMeshUpdate = true;
     }
 
+    private void OnSurfaceTraversalChanged(bool value)
+    {
+        _needsMultiMeshUpdate = true;
+    }
+
     private void UpdateRockCounts()
     {
         if (_rockCount + _iceCount + _metalCount == _nearNodes.Count) return; // No change in near nodes, skip counting
@@ -143,6 +148,7 @@ public partial class Asteroid : Node3D
             _uiController.NeighborCullingCheck.Toggled += OnNeighborCullingChanged;
             _uiController.CrossSectionCheck.Toggled += OnCrossSectionChanged;
             _uiController.ConsolidateButton.Pressed += OnConsolidate;
+            _uiController.SurfaceTraversalCheck.Toggled += OnSurfaceTraversalChanged;
         }
 
         // Initial update
@@ -178,7 +184,21 @@ public partial class Asteroid : Node3D
 
         ulong octreeStartUs = Time.GetTicksUsec();
 
-        List<OctreeNode> visibleNodes = _octree.QueryForLOD(cameraPos, thetaThreshold, _settings.NeighborCulling);
+        List<OctreeNode> visibleNodes = null;
+        if (_settings.SurfaceTraversal)
+        {
+            // Fill in one seed: the terrain height at the camera position
+            List<Vector3> seedPosList = new List<Vector3>();
+            float localHeight = _generator.GetHeight(cameraPos);
+            localHeight = MathF.Max(localHeight, 0.0f); // Currently the generator fills in "oceans" with ice so the actual surface never goes below 0
+            Vector3 groundPos = cameraPos.Normalized() * (_radius + localHeight);
+            seedPosList.Add(groundPos);
+            visibleNodes = _octree.SurfaceTraversal(cameraPos, thetaThreshold, seedPosList);
+        }
+        else
+        {
+            visibleNodes = _octree.QueryForLOD(cameraPos, thetaThreshold, _settings.NeighborCulling);
+        }
 
         ulong octreeEndUs = Time.GetTicksUsec();
         _octreeUs = (int)(octreeEndUs - octreeStartUs);

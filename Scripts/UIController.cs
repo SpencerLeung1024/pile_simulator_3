@@ -10,6 +10,7 @@ public class Settings
 	public int MaxStaticRocks;
 	public bool NeighborCulling;
 	public bool CrossSection;
+	public bool SurfaceTraversal;
 	
 	private static Settings singleton = null;
 
@@ -36,6 +37,7 @@ public partial class UIController : Control
 	[Export] public CheckButton NeighborCullingCheck;
 	[Export] public CheckButton CrossSectionCheck;
 	[Export] public Button ConsolidateButton;
+	[Export] public CheckButton SurfaceTraversalCheck;
 
 	private Settings _settings = Settings.GetSettings();
 
@@ -77,6 +79,11 @@ public partial class UIController : Control
 		_settings.CrossSection = value;
 	}
 
+	private void OnSurfaceTraversalChanged(bool value)
+	{
+		_settings.SurfaceTraversal = value;
+	}
+
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
@@ -89,12 +96,14 @@ public partial class UIController : Control
 		NeighborCullingCheck.Toggled += OnNeighborCullingChanged;
 		CrossSectionCheck.Toggled += OnCrossSectionChanged;
 		//ConsolidateButton.Pressed += OnConsolidate; // UIController does not need to connect to this
+		SurfaceTraversalCheck.Toggled += OnSurfaceTraversalChanged;
 
 		// Fill in initial values
 		OnRealizationRadiusChanged(RealizationRadiusSlider.Value);
 		OnMaxStaticRocksChanged(MaxStaticRocksSlider.Value);
 		OnNeighborCullingChanged(NeighborCullingCheck.ButtonPressed);
 		OnCrossSectionChanged(CrossSectionCheck.ButtonPressed);
+		OnSurfaceTraversalChanged(SurfaceTraversalCheck.ButtonPressed);
 	}
 
 	private void GenerateDebugText()

@@ -306,6 +306,7 @@ public class Octree
 		}
 	}
 
+	// First algorithm: apparently visited nodes grows as r^3 * log2(a/r) so this won't work
 	// Similar to Barnes-Hut approximation for gravity
 	// Returns a list of nodes (possibly leaf, possibly internal) where farther nodes are larger
 	public List<OctreeNode> QueryForLOD(Vector3 queryPos, float theta, bool neighborCulling)
@@ -451,6 +452,213 @@ public class Octree
 Terminus:
   Empty: {terminusEmpty} Solid: {terminusSolid}
 	Enclosed: {terminusEnclosed} Exposed: {terminusExposed}".Replace(System.Environment.NewLine, "\n"); // RichTextLabel handles \r\n fine, but GD.Print produces two newlines
+
+		return result;
+	}
+
+	// Face neighbors
+	// Used to get the Vector3 for the hash set
+	private Vector3[] faceVectors = new Vector3[6]
+	{
+		new Vector3(-1, 0, 0), // -x
+		new Vector3(0, -1, 0), // -y
+		new Vector3(0, 0, -1), // -z
+		new Vector3(1, 0, 0), // +x
+		new Vector3(0, 1, 0), // +y
+		new Vector3(0, 0, 1) // +z
+	};
+
+	// Edge neighbors
+	private Vector3[] edgeVectors = new Vector3[12]
+	{
+		new Vector3(0, -1, -1), new Vector3(0, -1, 1), new Vector3(0, 1, -1), new Vector3(0, 1, 1), // same x
+		new Vector3(-1, 0, -1), new Vector3(-1, 0, 1), new Vector3(1, 0, -1), new Vector3(1, 0, 1), // same y
+		new Vector3(-1, -1, 0), new Vector3(-1, 1, 0), new Vector3(1, -1, 0), new Vector3(1, 1, 0)  // same z
+	};
+
+	// Second algorithm: should hopefully be r^2 * log2(a/r)
+	// It goes around on the surface so neighbor culling is implicit
+	public List<OctreeNode> SurfaceTraversal(Vector3 cameraPos, float theta, List<Vector3> seedPosList)
+	{
+		List<OctreeNode> result = new List<OctreeNode>();
+		//Queue<OctreeNode> todo = new Queue<OctreeNode>();
+		Queue<(OctreeNode, int)> todo = new Queue<(OctreeNode, int)>(); // Store a debug stat of the traversal depth
+		HashSet<Vector3> visited = new HashSet<Vector3>(); // Do not add neighbors that have already been checked for validity in the queue
+		// Note that visited may include nodes that are empty, or solid and enclosed. All that matters is that we know they cannot be part of the result and cannot extend the flood fill
+
+		// Keep track of paths
+		int visitedNodes = 0;
+			int timesPromoted = 0;
+			int timesDemoted = 0;
+			int timesSame = 0;
+		int rootToNodeCalls = 0;
+		int getFaceNeighborCalls = 0;
+		int maxQueueSize = 0;
+		int maxDepth = 0;
+
+		// Convert seed positions to nodes
+		foreach (Vector3 seedPos in seedPosList)
+		{
+			// Slight errors in the generation mean that the actual node at the seed position may be empty or solid and enclosed
+			// Explore up to a 3 x 3 x 3 cube around the seed pos, stopping the first time we find a seed
+			// Nevermind that still fails sometimes so go 5 x 5 x 5
+			// Huh. Even that fails
+			int offsetSize = (int) MathF.Max(0, MathF.Ceiling(MathF.Log2(cameraPos.DistanceTo(seedPos) * theta)));
+			bool seedFound = false;
+			for (int x = -2; x < 3; x++)
+			{
+				for (int y = -2; y < 3; y++)
+				{
+					for (int z = -2; z < 3; z++)
+					{
+						Vector3 offsetSeedPos = seedPos + (new Vector3(x, y, z) * offsetSize);
+						int desiredHeight = (int) MathF.Max(0, MathF.Ceiling(MathF.Log2(cameraPos.DistanceTo(offsetSeedPos) * theta))); // Depending on how far away the seed position is, it may not need to be a leaf node
+						rootToNodeCalls++;
+						OctreeNode seedNode = Query(offsetSeedPos, desiredHeight, true, false); // Descendants of a truly empty node must be empty, but descendants of a truly solid node can be on the surface
+						if (seedNode != null)
+						{
+							visited.Add(offsetSeedPos);
+							getFaceNeighborCalls += 6;
+							if (seedNode.Material != MaterialEnum.Empty && GetExposedFaces(seedNode) != 0x00)
+							{
+								todo.Enqueue((seedNode, 0));
+								seedFound = true;
+								break;
+							}
+						}
+					}
+					if (seedFound)
+					{
+						break;
+					}
+				}
+				if (seedFound)
+				{
+					break;
+				}
+			}
+		}
+
+		// If all seeds failed we can't do anything
+		if (todo.Count == 0)
+		{
+			GD.PrintErr("All seed positions were not surface nodes");
+			return result;
+		}
+
+		while (todo.Count > 0)
+		{
+			(OctreeNode node, int depth) = todo.Dequeue();
+
+			visitedNodes++;
+			maxQueueSize = Math.Max(maxQueueSize, todo.Count);
+			maxDepth = Math.Max(maxDepth, depth);
+
+			int desiredHeight = (int) MathF.Max(0, MathF.Ceiling(MathF.Log2(cameraPos.DistanceTo(node.Center) * theta)));
+			// Case 1: We have crossed the boundary into an outer shell
+			if (desiredHeight > node.Height)
+			{
+				timesPromoted++;
+				OctreeNode parent = node.Parent;
+				if (parent != null && !visited.Contains(parent.Center)) // Not the parent of the root
+				{
+					visited.Add(parent.Center);
+					getFaceNeighborCalls += 6;
+					if (parent.Material != MaterialEnum.Empty && GetExposedFaces(parent) != 0x00)
+					{
+						todo.Enqueue((parent, depth + 1));
+					}
+				}
+			}
+			// Case 2: We have crossed the boundary into an inner shell
+			else if (desiredHeight < node.Height)
+			{
+				timesDemoted++;
+				if (node.Children == null) // Realize children on demand. This can never happen on a leaf node (real voxel) because desiredHeight = 0 !< 0
+				{
+					RealizeChildren(node);
+				}
+				// Add all solid and exposed children to the queue
+				// But wait, isn't expanding the 8 children of a node r^3?
+				// Shut up
+				Vector3[] childCenters = node.GetChildCenters();
+				for (int i = 0; i < 8; i++)
+				{
+					Vector3 childCenter = childCenters[i];
+					if (!visited.Contains(childCenter))
+					{
+						visited.Add(childCenter);
+						OctreeNode child = node.Children[i];
+						getFaceNeighborCalls += 6;
+						if (child.Material != MaterialEnum.Empty && GetExposedFaces(child) != 0x00)
+						{
+							todo.Enqueue((child, depth + 1));
+						}
+					}
+				}
+			}
+			// Case 3: This node is the right size
+			// We know from invariants that this node is solid and exposed, so add it
+			// Check its 6 neighbors to see if they are also solid and exposed, so they can be added to the queue
+			// Nevermind, with only face neighbors, the asteroid forms weird bands because the traversal cannot hop across layers
+			// Add the 12 edge neighbors as well (unfortunately I can't think of an easy pointer traversal method)
+			// The 8 corner neighbors will only be needed in the very specific case of a nearly disjoint asteroid where the isthumus is two corner adjacent nodes
+			// We can save a lot of checks by hoping that doesn't happen
+			else
+			{
+				timesSame++;
+				result.Add(node);
+				// Face neighbors
+				for (int i = 0; i < 6; i++)
+				{
+					Vector3 neighborPos = node.Center + (faceVectors[i] * node.Size);
+					if (!visited.Contains(neighborPos))
+					{
+						visited.Add(neighborPos);
+						getFaceNeighborCalls++;
+						OctreeNode neighbor = GetFaceNeighbor(node, i);
+						if (neighbor != null)
+						{
+							getFaceNeighborCalls += 6;
+							if (neighbor.Material != MaterialEnum.Empty && GetExposedFaces(neighbor) != 0x00)
+							{
+								todo.Enqueue((neighbor, depth + 1));
+							}
+						}
+					}
+				}
+				// Edge neighbors
+				for (int i = 0; i < 12; i++)
+				{
+					Vector3 neighborPos = node.Center + (edgeVectors[i] * node.Size);
+					if (!visited.Contains(neighborPos))
+					{
+						visited.Add(neighborPos);
+						rootToNodeCalls++;
+						OctreeNode neighbor = Query(neighborPos, node.Height, true, false); // Expensive root to node query but what can you do
+						if (neighbor != null)
+						{
+							getFaceNeighborCalls += 6;
+							if (neighbor.Material != MaterialEnum.Empty && GetExposedFaces(neighbor) != 0x00)
+							{
+								todo.Enqueue((neighbor, depth + 1));
+							}
+						}
+					}
+				}
+			}
+		}
+
+		Dictionary<string, string> debugInfo = Settings.GetSettings().DebugInfo;
+		// This is changed often so format TraversalLines here instead of formatting in UIController.cs
+		debugInfo["TraversalLines"] = $@"Visited: {visitedNodes}
+  Promoted: {timesPromoted}
+  Demoted: {timesDemoted}
+  Same: {timesSame}
+Root Calls: {rootToNodeCalls}
+Neighbor Calls: {getFaceNeighborCalls}
+Max Queue Size: {maxQueueSize}
+Max Depth: {maxDepth}".Replace(System.Environment.NewLine, "\n"); // RichTextLabel handles \r\n fine, but GD.Print produces two newlines
 
 		return result;
 	}

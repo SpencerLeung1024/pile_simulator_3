@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://eyqm23m4wlbm" path="res://Scripts/UIController.cs" id="1_w371h"]
 
-[node name="UI" type="Control" unique_id=1472228808 node_paths=PackedStringArray("DebugLabel", "DumpDebugButton", "RealizationRadiusSlider", "RealizationRadiusLabel", "MaxStaticRocksSlider", "MaxStaticRocksLabel", "NeighborCullingCheck", "CrossSectionCheck", "ConsolidateButton")]
+[node name="UI" type="Control" unique_id=1472228808 node_paths=PackedStringArray("DebugLabel", "DumpDebugButton", "RealizationRadiusSlider", "RealizationRadiusLabel", "MaxStaticRocksSlider", "MaxStaticRocksLabel", "NeighborCullingCheck", "CrossSectionCheck", "ConsolidateButton", "SurfaceTraversalCheck")]
 process_priority = 999
 layout_mode = 3
 anchors_preset = 15
@@ -20,6 +20,7 @@ MaxStaticRocksLabel = NodePath("VBoxBottomRight/MaxStaticRocksLabel")
 NeighborCullingCheck = NodePath("VBoxBottomRight/NeighborCullingCheck")
 CrossSectionCheck = NodePath("VBoxBottomRight/CrossSectionCheck")
 ConsolidateButton = NodePath("VBoxBottomRight/ConsolidateButton")
+SurfaceTraversalCheck = NodePath("VBoxBottomRight/SurfaceTraversalCheck")
 
 [node name="DebugLabel" type="RichTextLabel" parent="." unique_id=1057721705]
 layout_mode = 0
@@ -72,6 +73,11 @@ offset_right = -10.0
 offset_bottom = -10.0
 grow_horizontal = 0
 grow_vertical = 0
+
+[node name="SurfaceTraversalCheck" type="CheckButton" parent="VBoxBottomRight" unique_id=2137799156]
+layout_mode = 2
+button_pressed = true
+text = "Surface Traversal"
 
 [node name="ConsolidateButton" type="Button" parent="VBoxBottomRight" unique_id=1784392229]
 layout_mode = 2
