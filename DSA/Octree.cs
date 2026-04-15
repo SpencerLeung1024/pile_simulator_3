@@ -476,6 +476,37 @@ Terminus:
 		new Vector3(-1, -1, 0), new Vector3(-1, 1, 0), new Vector3(1, -1, 0), new Vector3(1, 1, 0)  // same z
 	};
 
+	// Edge-to-face mapping: each edge neighbor can be found via two chained GetFaceNeighbor calls
+	// e.g. edge (0, -1, -1) = GetFaceNeighbor(-y) then GetFaceNeighbor(-z)
+	// face indices: 0=-x, 1=-y, 2=-z, 3=+x, 4=+y, 5=+z
+	private static readonly int[,] edgeFacePairs = new int[12, 2]
+	{
+		{1, 2}, // edge 0: (0, -1, -1) → -y then -z
+		{1, 5}, // edge 1: (0, -1, +1) → -y then +z
+		{4, 2}, // edge 2: (0, +1, -1) → +y then -z
+		{4, 5}, // edge 3: (0, +1, +1) → +y then +z
+		{0, 2}, // edge 4: (-1, 0, -1) → -x then -z
+		{0, 5}, // edge 5: (-1, 0, +1) → -x then +z
+		{3, 2}, // edge 6: (+1, 0, -1) → +x then -z
+		{3, 5}, // edge 7: (+1, 0, +1) → +x then +z
+		{0, 1}, // edge 8: (-1, -1, 0) → -x then -y
+		{0, 4}, // edge 9: (-1, +1, 0) → -x then +y
+		{3, 1}, // edge 10: (+1, -1, 0) → +x then -y
+		{3, 4}, // edge 11: (+1, +1, 0) → +x then +y
+	};
+
+	// Two chained face neighbor steps instead of one expensive root-to-leaf Query()
+	// GetFaceNeighbor starts from the node's local neighborhood (often O(1) for siblings)
+	// vs Query() which always traverses from the root (O(H) = O(log2(a)))
+	public OctreeNode GetEdgeNeighbor(OctreeNode node, int edgeIndex)
+	{
+		int face1 = edgeFacePairs[edgeIndex, 0];
+		int face2 = edgeFacePairs[edgeIndex, 1];
+		OctreeNode intermediate = GetFaceNeighbor(node, face1);
+		if (intermediate == null) return null;
+		return GetFaceNeighbor(intermediate, face2);
+	}
+
 	// Second algorithm: should hopefully be r^2 * log2(a/r)
 	// It goes around on the surface so neighbor culling is implicit
 	public List<OctreeNode> SurfaceTraversal(Vector3 cameraPos, float theta, List<Vector3> seedPosList)
@@ -499,11 +530,11 @@ Terminus:
 		// Convert seed positions to nodes
 		foreach (Vector3 seedPos in seedPosList)
 		{
-			// Slight errors in the generation mean that the actual node at the seed position may be empty or solid and enclosed
-			// Explore up to a 3 x 3 x 3 cube around the seed pos, stopping the first time we find a seed
-			// Nevermind that still fails sometimes so go 5 x 5 x 5
-			// Huh. Even that fails
-			int offsetSize = (int) MathF.Max(0, MathF.Floor(MathF.Log2(cameraPos.DistanceTo(seedPos) * theta)));
+			// Strategy 1: Grid search at the desired LOD around the seed position
+			// offsetSize must be the NODE SIZE (1 << height), not the height itself!
+			// At height 7, nodes are 128 m — using height 7 as offset only covers ±14 m, all within one node
+			int desiredSeedHeight = (int) MathF.Max(0, MathF.Floor(MathF.Log2(cameraPos.DistanceTo(seedPos) * theta)));
+			int offsetSize = 1 << desiredSeedHeight; // e.g. height 7 → 128 m offset per grid step
 			bool seedFound = false;
 			for (int x = -2; x < 3; x++)
 			{
@@ -512,12 +543,12 @@ Terminus:
 					for (int z = -2; z < 3; z++)
 					{
 						Vector3 offsetSeedPos = seedPos + (new Vector3(x, y, z) * offsetSize);
-						int desiredHeight = (int) MathF.Max(0, MathF.Floor(MathF.Log2(cameraPos.DistanceTo(offsetSeedPos) * theta))); // Depending on how far away the seed position is, it may not need to be a leaf node
+						int desiredHeight = (int) MathF.Max(0, MathF.Floor(MathF.Log2(cameraPos.DistanceTo(offsetSeedPos) * theta)));
 						rootToNodeCalls++;
-						OctreeNode seedNode = Query(offsetSeedPos, desiredHeight, true, false); // Descendants of a truly empty node must be empty, but descendants of a truly solid node can be on the surface
+						OctreeNode seedNode = Query(offsetSeedPos, desiredHeight, true, false);
 						if (seedNode != null)
 						{
-							visited.Add(seedNode.Center); // offsetSeedPos is not aligned to the world and hash checks against it will not work as expected
+							visited.Add(seedNode.Center);
 							getFaceNeighborCalls += 6;
 							if (seedNode.Material != MaterialEnum.Empty && GetExposedFaces(seedNode) != 0x00)
 							{
@@ -535,6 +566,41 @@ Terminus:
 				if (seedFound)
 				{
 					break;
+				}
+			}
+
+			// Strategy 2: Drill to leaf level and walk up to the desired height
+			// GetExposedFaces is unreliable at coarse LOD because a same-height neighbor's
+			// center-sampled material can be solid even though it contains empty children.
+			// By drilling to a leaf we confirm we're on the actual surface, then walk up.
+			if (!seedFound)
+			{
+				Vector3 dir = seedPos.Normalized();
+				// Try the seed position and a few radial offsets inward (in case seedPos is slightly outside)
+				for (int radialStep = 0; radialStep <= 5; radialStep++)
+				{
+					Vector3 probePos = dir * (seedPos.Length() - radialStep);
+					rootToNodeCalls++;
+					OctreeNode leaf = Query(probePos, 0, true, false);
+					if (leaf != null && leaf.Material != MaterialEnum.Empty)
+					{
+						// Walk up from the leaf to the desired LOD height
+						OctreeNode ancestor = leaf;
+						while (ancestor.Height < desiredSeedHeight && ancestor.Parent != null)
+						{
+							ancestor = ancestor.Parent;
+						}
+						if (!visited.Contains(ancestor.Center))
+						{
+							visited.Add(ancestor.Center);
+							// Skip GetExposedFaces — we KNOW this node contains the surface
+							// because its leaf descendant is a confirmed solid surface voxel.
+							// At coarse LOD, GetExposedFaces may falsely report it as enclosed.
+							todo.Enqueue((ancestor, 0));
+							seedFound = true;
+						}
+						break;
+					}
 				}
 			}
 		}
@@ -629,15 +695,15 @@ Terminus:
 						}
 					}
 				}
-				// Edge neighbors
+				// Edge neighbors — two chained GetFaceNeighbor calls instead of Query() from root
 				for (int i = 0; i < 12; i++)
 				{
 					Vector3 neighborPos = node.Center + (edgeVectors[i] * node.Size);
 					if (!visited.Contains(neighborPos))
 					{
 						visited.Add(neighborPos);
-						rootToNodeCalls++;
-						OctreeNode neighbor = Query(neighborPos, node.Height, true, false); // Expensive root to node query but what can you do
+						getFaceNeighborCalls += 2;
+						OctreeNode neighbor = GetEdgeNeighbor(node, i);
 						if (neighbor != null)
 						{
 							getFaceNeighborCalls += 6;
