@@ -487,7 +487,7 @@ Terminus:
 		// Note that visited may include nodes that are empty, or solid and enclosed. All that matters is that we know they cannot be part of the result and cannot extend the flood fill
 
 		// Keep track of paths
-		int visitedNodes = 0;
+		int timesDequeued = 0;
 			int timesPromoted = 0;
 			int timesDemoted = 0;
 			int timesSame = 0;
@@ -503,7 +503,7 @@ Terminus:
 			// Explore up to a 3 x 3 x 3 cube around the seed pos, stopping the first time we find a seed
 			// Nevermind that still fails sometimes so go 5 x 5 x 5
 			// Huh. Even that fails
-			int offsetSize = (int) MathF.Max(0, MathF.Ceiling(MathF.Log2(cameraPos.DistanceTo(seedPos) * theta)));
+			int offsetSize = (int) MathF.Max(0, MathF.Floor(MathF.Log2(cameraPos.DistanceTo(seedPos) * theta)));
 			bool seedFound = false;
 			for (int x = -2; x < 3; x++)
 			{
@@ -512,7 +512,7 @@ Terminus:
 					for (int z = -2; z < 3; z++)
 					{
 						Vector3 offsetSeedPos = seedPos + (new Vector3(x, y, z) * offsetSize);
-						int desiredHeight = (int) MathF.Max(0, MathF.Ceiling(MathF.Log2(cameraPos.DistanceTo(offsetSeedPos) * theta))); // Depending on how far away the seed position is, it may not need to be a leaf node
+						int desiredHeight = (int) MathF.Max(0, MathF.Floor(MathF.Log2(cameraPos.DistanceTo(offsetSeedPos) * theta))); // Depending on how far away the seed position is, it may not need to be a leaf node
 						rootToNodeCalls++;
 						OctreeNode seedNode = Query(offsetSeedPos, desiredHeight, true, false); // Descendants of a truly empty node must be empty, but descendants of a truly solid node can be on the surface
 						if (seedNode != null)
@@ -550,11 +550,12 @@ Terminus:
 		{
 			(OctreeNode node, int depth) = todo.Dequeue();
 
-			visitedNodes++;
+			timesDequeued++;
+
 			maxQueueSize = Math.Max(maxQueueSize, todo.Count);
 			maxDepth = Math.Max(maxDepth, depth);
 
-			int desiredHeight = (int) MathF.Max(0, MathF.Ceiling(MathF.Log2(cameraPos.DistanceTo(node.Center) * theta)));
+			int desiredHeight = (int) MathF.Max(0, MathF.Floor(MathF.Log2(cameraPos.DistanceTo(node.Center) * theta)));
 			// Case 1: We have crossed the boundary into an outer shell
 			if (desiredHeight > node.Height)
 			{
@@ -649,16 +650,19 @@ Terminus:
 			}
 		}
 
+		int visitedNodes = visited.Count;
+
 		Dictionary<string, string> debugInfo = Settings.GetSettings().DebugInfo;
 		// This is changed often so format TraversalLines here instead of formatting in UIController.cs
-		debugInfo["TraversalLines"] = $@"Visited: {visitedNodes}
+		debugInfo["TraversalLines"] = $@"Dequeued: {timesDequeued}
   Promoted: {timesPromoted}
   Demoted: {timesDemoted}
   Same: {timesSame}
 Root Calls: {rootToNodeCalls}
 Neighbor Calls: {getFaceNeighborCalls}
 Max Queue Size: {maxQueueSize}
-Max Depth: {maxDepth}".Replace(System.Environment.NewLine, "\n"); // RichTextLabel handles \r\n fine, but GD.Print produces two newlines
+Max Depth: {maxDepth}
+Visited: {visitedNodes}".Replace(System.Environment.NewLine, "\n"); // RichTextLabel handles \r\n fine, but GD.Print produces two newlines
 
 		return result;
 	}
