@@ -517,7 +517,7 @@ Terminus:
 						OctreeNode seedNode = Query(offsetSeedPos, desiredHeight, true, false); // Descendants of a truly empty node must be empty, but descendants of a truly solid node can be on the surface
 						if (seedNode != null)
 						{
-							visited.Add(offsetSeedPos);
+							visited.Add(seedNode.Center); // offsetSeedPos is not aligned to the world and hash checks against it will not work as expected
 							getFaceNeighborCalls += 6;
 							if (seedNode.Material != MaterialEnum.Empty && GetExposedFaces(seedNode) != 0x00)
 							{
@@ -548,11 +548,12 @@ Terminus:
 
 		while (todo.Count > 0)
 		{
+			maxQueueSize = Math.Max(maxQueueSize, todo.Count);
+			
 			(OctreeNode node, int depth) = todo.Dequeue();
 
 			timesDequeued++;
 
-			maxQueueSize = Math.Max(maxQueueSize, todo.Count);
 			maxDepth = Math.Max(maxDepth, depth);
 
 			int desiredHeight = (int) MathF.Max(0, MathF.Floor(MathF.Log2(cameraPos.DistanceTo(node.Center) * theta)));
