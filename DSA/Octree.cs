@@ -215,8 +215,8 @@ public class Octree
 	}
 
 	// Samet's octree neighbor algorithm (1989)
-	// Reference implementation in reports/better_traversal/opus_4_6.md
-	// See reports/better_traversal/samet_algorithm_workthrough.jpg for a workthrough (using a quadtree because I can't draw in 3D) on paper
+	// Reference implementation in docs/archive/better_traversal/opus_4_6.md
+	// See docs/archive/better_traversal/samet_algorithm_workthrough.jpg for a workthrough (using a quadtree because I can't draw in 3D) on paper
 	// I suppose you could do it by checking if queryPos and neighborPos are both within currentNode, and use repeated GetOctant() on the way down
 	// Bit manipulation should be faster though
 	// face: 5=+z, 4=+y, 3=+x, 2=-z, 1=-y, 0=-x (bit index of ExposedFaces)

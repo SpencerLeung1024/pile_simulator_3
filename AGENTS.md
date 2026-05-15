@@ -1,52 +1,58 @@
-# Pile Simulator 3 — Agent Notes
+# Pile Simulator 3
 
-## Stack
-- Godot 4.7.dev3, Forward+, C# (.NET 8), Jolt Physics
-- Built with Godot.NET.Sdk/4.7.0-dev.3; TargetFramework net8.0
-- Open via Godot Editor or `dotnet build`; no custom test/lint/CI setup exists
+A game about asteroid mining and processing
+- Control a robot and interact with onboard and built systems
+- Break down an asteroid's voxels for resources
+- Use chemistry, thermodynamics, and various devices to process them
+- Transfer across the solar system using an engine
+- Sell stuff
 
-## Directory Boundaries
-| Directory | Purpose |
-|-----------|---------|
-| `Scripts/` | Godot node scripts (`[GlobalClass]`, `[Export]`, `_Ready`, `_Process`) |
-| `DSA/` | Pure data-structure / algorithm code (octree, generator, materials). No Godot node inheritance. |
-| `Scenes/` | `.tscn` files; scene tree is wired in the editor, not in code |
-| `reports/` | Design docs, algorithm references, and debug dumps |
+Except basically none of that exists yet
 
-## Scene-Code Coupling Rules (from `.clinerules`, strictly observed)
-- **Do not assign default values to `[Export]` fields in scripts.** The author configures all node parameters in the Godot editor. Leave `[Export]` fields uninitialized.
-- **Do not search for scene nodes in `_Ready()`.** All node references must be `[Export]` and assigned in the editor.
-- The scene tree should **reflect** the underlying game data; it does not **own** it.
-- Fail early, fail loudly. Do not continue with invalid state.
+Inspirations from Minecraft, various mining games on Roblox, Space Engineers, Stationeers, etc.
 
-## Architecture
-- `World.tscn` → `World.cs` (root) → `Asteroid` + `FreeCamController` + `UI`
-- `Asteroid.cs` owns the sparse voxel octree (`DSA/Octree.cs`) and the `AsteroidGenerator`.
-- Two traversal modes (toggleable in UI):
-  - `QueryForLOD`: Barnes-Hut-style theta culling. Scales poorly (~r³); used for baseline comparison.
-  - `SurfaceTraversal`: Flood-fill over exposed surface starting from seed points. Intended to scale near-surface.
-- Near nodes (real voxels) → `StaticRock.tscn` instances via object pool.
-- Far nodes (internal octree nodes) → `MultiMeshRock.tscn` / `MultiMeshInstance3D`.
+## Project Info
 
-## Key Implementation Details
-- **Octree node identity for pooling:** `Asteroid.cs` rounds `node.Center * 1000` to `Vector3I` as the dictionary key for static rocks. Changing coordinate scaling breaks the pool.
-- **Neighbor culling holes:** At coarse LOD, `GetExposedFaces` can falsely report a node as enclosed if a same-height neighbor’s center-sampled material is solid but it contains empty children. `SurfaceTraversal` avoids this by drilling to leaf level before walking up.
-- **Samet neighbor algorithm:** `Octree.GetFaceNeighbor` uses bit-mirrored path traversal. See `reports/better_traversal/` for reference walkthrough.
-- **Consolidation:** `Octree.Consolidate` is a manual, post-order pass that collapses uniform subtrees. Must be triggered from UI; it is not automatic.
-- **Material enum:** `MaterialEnum.Empty = -1` (matches `GridMap.InvalidCellItem`). Rock=0, Ice=1, Metal=2.
+Godot 4.7.beta2, Forward+, Jolt Physics, C# 14, net10.0
 
-## Singletons
-- `Settings.GetSettings()` — shared mutable state (debug text, toggles, slider values)
-- `UIController.GetUIController()` — UI node references; throws if called before `_Ready`
-- `FreeCamController.GetFreeCamController()` — camera singleton; throws if called before `_Ready`
+### Directory
+- Data: Constants, voxel cell materials, chemical species, elements, nuclides, countable items
+- DSA: Anything not bound to a node
+- - Voxel: Asteroid generator and octree
+- - Gravity: "Physics" gravity (forces applied on nearby rigid bodies) and Keplerian orbits
+- - Chemistry: State functions, equations of state, simulator for what happens to Species inside a Volume, and devices with specific inputs and outputs
+- Scripts: Anything bound to a Godot node, has _Ready and _Process, etc.
+- Scenes: .tscn files
+- docs: .md files
+- - archive: old notes go here
 
-## Running / Testing
-- No unit tests or automated verification exist.
-- Validate by opening the project in the Godot Editor and running the main scene (`World.tscn`).
-- Use the in-game debug panel (FPS, traversal stats, rock counts) to verify behavior.
+### Scenes
+- MainMenu: Lets you go to World, SolarSystem, Shop, or BoxSim
+- World: An Asteroid that you can freecam around
+- SolarSystem: Planets and asteroids are shown in orbits
+- Shop: Buy and sell Species and Items. Currently this does not depend on your location, because there is no "you" and no "your location"
+- BoxSim: A Volume
 
-## WSL Bridge
-- `opencode.ps1` is a PowerShell helper that forwards `opencode` CLI calls into WSL at the current Windows directory. It assumes the WSL username matches `$env:USERNAME`.
+## Guidelines
+- Node references [Export] should be set in the Godot editor by me. Do not initialize in code or find in _Ready(). This reduces boilerplate and avoids bugs from different values
+- Fail early, fail loudly. Errors are important and should not be concealed. Any fallbacks or handling should only be implemented by me after being aware
+- The scene tree reflects the underlying game data. It is not the truth
 
-## Porting Note (Roo Code → OpenCode)
-- `.clinerules` was the previous instruction file. This `AGENTS.md` supersedes it for OpenCode sessions. Retain the editor-assignment and fail-early conventions above.
+## Current
+
+- Implement code for chemical simulations
+- Put on hold because it's beyond my thinking ability:
+- - Making the octree LOD faster
+- - Removing voxels
+- - Adding smaller rigid rocks from mining
+
+## Future
+
+- Research what materials, minerals, and elements exist in asteroids
+- Research how mineral and chemical processing works in real life
+- Figure out how to translate that into game mechanics
+- Implement a solar system and orbit transfers
+- Make the shop depend on your position
+- Give the player and built structures inventories
+- Buildable structures
+- Archive the BoxSim (Volumes will be used in the World)
