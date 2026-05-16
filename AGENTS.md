@@ -27,11 +27,14 @@ Godot 4.7.beta2, Forward+, Jolt Physics, C# 14, net10.0
 - - archive: old notes go here
 
 ### Scenes
+
+Only World exists right now
+
 - MainMenu: Lets you go to World, SolarSystem, Shop, or BoxSim
 - World: An Asteroid that you can freecam around
 - SolarSystem: Planets and asteroids are shown in orbits
-- Shop: Buy and sell Species and Items. Currently this does not depend on your location, because there is no "you" and no "your location"
-- BoxSim: A Volume
+- Shop: Buy and sell Species and Items. Location dependence is waiting on the fact that is no "you" and no "your location"
+- BoxSim: A Volume and a test to see if the chemical simulation is working
 
 ## Guidelines
 - Node references [Export] should be set in the Godot editor by me. Do not initialize in code or find in _Ready(). This reduces boilerplate and avoids bugs from different values
@@ -40,7 +43,19 @@ Godot 4.7.beta2, Forward+, Jolt Physics, C# 14, net10.0
 
 ## Current
 
-- Implement code for chemical simulations
+- Implement code for thermodynamic simulations
+- Specific things that need to be addressed:
+- - How do I store the mass / energy of nuclides? Mass in Da? Binding energy in eV? Binding energy per nucleon? Are nuclear reactions exactly equal to changes in mass?
+- - - Nuclides are not the top priority right now, but they will be important for nuclear reactions in the far future
+- - How do I calculate the saturation pressure of a cubic EOS? https://en.wikipedia.org/wiki/Maxwell_construction is extremely difficult for me to follow
+- - Implement the NASA7, NASA9, and Shomate heat capacity functions
+- - Figure out how IdealGasEquation.GetU should work
+- - - Why is internal energy U a function of entropy S and volume v?
+- - Implement the incompressible phase, van der Waals, Redlich-Kwong, Soave-Redlich-Kwong, and Peng-Robinson EOS
+- - Figure out how to architect Resource and Volume. What are fields and what are methods? What goes in what class? If I apply heat, how does the control flow?
+
+- The dissociation / recombination loop will be handled later, after phase change works
+
 - Put on hold because it's beyond my thinking ability:
 - - Making the octree LOD faster
 - - Removing voxels

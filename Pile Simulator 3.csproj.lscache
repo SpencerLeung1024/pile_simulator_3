@@ -58,7 +58,17 @@ TemporaryDependencyNodeTargetIdentifier=net10.0
  Pile Simulator 3.AssemblyInfo.cs
 DSA/
  AsteroidGenerator.cs
- Materials.cs
+ Chemistry/
+  EquationsOfState.cs
+  HeatCapacityFunctions.cs
+  Volume.cs
+ Data/
+  Constants.cs
+  Elements.cs
+  Items.cs
+  Materials.cs
+  Nuclides.cs
+  Species.cs
  Octree.cs
 Scripts/
  Asteroid.cs

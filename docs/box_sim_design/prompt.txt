@@ -1,0 +1,26 @@
+Maybe trying to make a single massive equation of state that handles all three phases is the wrong approach. Keeping track of energy and choosing the phase that offers the lowest energy under present conditions is looking more appealing.
+
+A model material might have the behavior of packing face-centered cubic above a certain density, but real materials have all sorts of unusual solid forms (water ice expands, carbon can be diamond or graphite, phosphorus can be white, red, or black, etc.).
+
+Ideally, each solid represented by the model just says it has a certain amount of internal energy and occupies a certain volume. The model should not need to go into intricacies of crystal structure or other things. It just chooses whichever form has the lowest energy.
+
+I'm not sure how to model activation energy though. All diamond will spontaneously turn into graphite, and solid carbon and gaseous hydrogen will spontaneously form gaseous methane at standard conditions.
+
+I want to code a toy model where you can put various materials in a box. Every frame, it runs a bunch of steps, making exponentially smaller adjustments each time. Hopefully it converges to something.
+
+In each step, I imagine it liberates a fraction of all atoms then tries to form chemicals, from most negative enthalpy of formation to most positive. However, I don't think any chemicals with positive enthalpies of formation will end up existing because elements always have a pure form with zero enthalpy of formation.
+
+Formed chemicals are put back in the box in the phase that has the least energy at the current conditions.
+
+The changes in energy are added up to adjust the temperature of the box.
+
+I hope this can elicit various behaviors like:
+- ice, water, steam, supercritical steam, dissociation into H2 and O2, dissociation into monoatomic hydrogen and oxygen
+- sometimes N2 and H2 being preferred, and sometimes NH3 being preferred
+- sometimes N2O4 being preferred, and sometimes 2x NO2 being preferred
+
+I was playing Stationeers and I now have a newfound appreciation of how RocketWerkz whittled down real life thermodynamics into something that runs fast enough to do a tick across thousands of pipes every 500 milliseconds. But I wonder what things would look like if they were a little more "realistic" / data-driven instead of "these two chemicals combust because I say so". Particularly, incomplete combustion producing carbon monoxide, that you can turn into carbon dioxide if you give it enough oxygen. Instead of an ambiguous "pollutant" that is always produced.
+
+I think I'll need to keep the assumption that chemicals are immiscible, so no eutectics or azeotropes. Each chemical condenses and freezes into a clump with itself. In the gas phase they do not interact.
+
+What information do I need to add to each chemical to make my toy model work?

@@ -1,5 +1,10 @@
 # Log
 
+## 2026-05-15: Chemistry 101
+- Wrote .md files describing how the chemistry system will work
+- Filled in the elements
+- Started working on other chemistry code but I'm too dumb
+
 ## 2026-05-14: Stealing stuff from Stationeers
 - I wasted a month playing Stationeers and having my base randomly explode
 - Reorganized things (DSA/*, docs)
