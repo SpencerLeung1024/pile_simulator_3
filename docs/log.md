@@ -1,5 +1,12 @@
 # Log
 
+## 2026-05-17: Chemistry 201
+- Asked DeepSeek V4 Pro how to architect the chemistry system
+- Actually read about the method of Lagrange multipliers and realized it would be easier than iterative dissociation + recombination
+- Numerical instability ruins the fun though
+- Introducing the element potential method
+- Very few resources on the internet and I have no idea why it works
+
 ## 2026-05-15: Chemistry 101
 - Wrote .md files describing how the chemistry system will work
 - Filled in the elements

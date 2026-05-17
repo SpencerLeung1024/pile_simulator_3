@@ -53,11 +53,8 @@ public class Resource
     //public Phase Phase;
     // Normalize. SpeciesPhase contains both Species and Phase, so don't store them separately (avoid potential for inconsistency)
     public SpeciesPhase SpeciesPhase;
-    public float Amount; // mol
-
-    // TODO: Figure out where to store things like temperature, internal energy, etc.
-
-    // TODO: Methods for applying heat
+    public float n; // mol
+    // These are all the fields of Resource. It has no methods. All chemistry logic is handled by Volume
 }
 
 // TODO: Define species and species phases
