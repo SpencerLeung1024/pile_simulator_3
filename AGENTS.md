@@ -46,15 +46,6 @@ Only World exists right now
 
 - Implement code for thermodynamic simulations
 
-- - How do I store the mass / energy of nuclides? Mass in Da? Binding energy in eV? Binding energy per nucleon? Are nuclear reactions exactly equal to changes in mass?
-- - - Nuclides are not the top priority right now, but they will be important for nuclear reactions in the far future
-- - How do I calculate the saturation pressure of a cubic EOS? https://en.wikipedia.org/wiki/Maxwell_construction is extremely difficult for me to follow
-- - Implement the NASA7, NASA9, and Shomate heat capacity functions
-- - Figure out how IdealGasEquation.GetU should work
-- - - Why is internal energy U a function of entropy S and volume v?
-- - Implement the incompressible phase, van der Waals, Redlich-Kwong, Soave-Redlich-Kwong, and Peng-Robinson EOS
-- - Figure out how to architect Resource and Volume. What are fields and what are methods? What goes in what class? If I apply heat, how does the control flow?
-
 - Answered by DeepSeek V4 Pro:
 - - Store nuclide binding energy in eV per nucleon. That is the most convenient form found online. Calculate nuclide mass as Z * proton mass + N * neutron mass - (Z + N) * binding energy per nucleon. All energy changes are product mass - reactant mass
 - - Internal energy U *can* theoretically be calculated as U(S, v), but U(T, v) is more practical
