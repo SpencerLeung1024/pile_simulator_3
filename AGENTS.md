@@ -60,7 +60,7 @@ Only World exists right now
 - - Pressure, volume, and fugacity of gases and liquids is obtained from a cubic EOS, and that equilibrium will differ from the equilibrium of the reaction
 
 - Current Issues:
-- - 
+- - What is the dual problem in PDF 1? I have no idea what it looks like, what variables it uses as input, or how to implement it
 
 - Put on hold because it's beyond my thinking ability:
 - - Making the octree LOD faster
