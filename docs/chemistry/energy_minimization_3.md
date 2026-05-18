@@ -52,7 +52,7 @@ total_n changes as species dissociate and reform. O, O2, O3, etc.
 
 ### Ideal Gases and Ideal Solutions
 
-Interestingly, PDF 1 also treats all liquids as an ideal solution.
+Interestingly, PDF 1 also treats all liquids as an ideal solution
 An alkane species and water will mix, forming a liquid phase with volume equal to what their volumes would have been if they formed separate clumps
 Even solids form an ideal solution of solids
 This means that the chemical potential of liquids and solids includes an entropy of mixing: RT ln(x_j_in_phase)
@@ -112,11 +112,11 @@ Using some linear algebra tricks:
 (next_vec_x - vec_x) = -J(vec_x)^-1 @ F(vec_x)
 J(vec_x) @ (next_vec_x - vec_x) = J(vec_x) @ -J(vec_x)^-1 @ F(vec_x)
 J(vec_x) @ (next_vec_x - vec_x) = -F(vec_x) because AA^-1 = I
-J(vec_x) @ Δx = -F(vec_x) because AA^-1 = I
+J(vec_x) @ Δvec_x = -F(vec_x)
 
 This is a linear system in the form Ax = b, which can be solved with linear algebra
 
-next_vec_x = vec_x + Δx
+next_vec_x = vec_x + Δvec_x
 
 You need to recalculate F(vec_x) and J(vec_x) every step. J(vec_x) requires m * n partial derivatives
 
