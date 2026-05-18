@@ -54,13 +54,13 @@ Only World exists right now
 - - Use the Element Potential Method to find the equilibrium of the reaction
 - - Resource contains SpeciesPhase and n only. It does not store thermodynamic variables. Volume handles conservation of various things
 
+- Answered by GPT-5.5 and Opus 4.7:
+- - The dual problem is a system of (num elements + num phases) non-linear equations. It combines element usage constraints and mole fraction normalization constraints. How to set it up is in `docs/chemistry/dual_problem`
+
 - Implied assumptions:
 - - There is one state for the entire box. All SpeciesPhases obey the same temperature and pressure from Volume
 - - The equilibrium of the reaction assumes ideal gases, ideal liquid solutions, and ideal solid solutions
 - - Pressure, volume, and fugacity of gases and liquids is obtained from a cubic EOS, and that equilibrium will differ from the equilibrium of the reaction
-
-- Current Issues:
-- - What is the dual problem in PDF 1? I have no idea what it looks like, what variables it uses as input, or how to implement it
 
 - Put on hold because it's beyond my thinking ability:
 - - Making the octree LOD faster

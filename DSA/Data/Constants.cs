@@ -3,7 +3,11 @@ using System;
 
 public class Constants
 {
-    // Gravity
+    // Physics
+
+    // speed of light
+    public const float c = 2.99792458e8f; // m / s
+    // gravitational constant
     public const float G = 6.67430e-11f; // m^3 / (kg * s^2)
 
     // Chemistry
@@ -33,4 +37,52 @@ public class Constants
     public const float Da = 1.66053906892e-27f; // kg
     // electronvolt
     public const float eV = 1.602176634e-19f; // J
+
+    // Gameplay
+    public const float ConservationOfMassTolerance = 1e-7f; // (mol element in product - mol element in reactant) / mol element in reactant
+
+    // floats have 23 bits in the mantissa and 24 bits of precision, which is about 7.225 decimal digits
+    // doubles have 52 bits in the mantissa and 53 bits of precision, which is about 15.955 decimal digits
+    // It is not possible for floats to represent precisions below 1e-7
+
+    // How long will it take for a mol to become 0.5 mol at an error of 1e-7 per frame?
+
+    // present = initial * (1 - error) ^ frames
+    // 0.5 = 1 * (1 - 1e-7) ^ frames
+    // Solve for frames
+    // log10(0.5) = frames * log10(1 - 1e-7)
+    // frames = log10(0.5) / log10(1 - 1e-7)
+    // frames = -3.010 299 956 639 81e-1 / -4.342 945 036 179 77e-8
+    // frames = 6.931 471 459 025 85e6
+    // That's about 1 day 8 hours at 60 FPS
+    // It's actually not very long. I've put 120 hours into my moon base in Stationeers
+    // The reaction and phase solvers run constantly, so if I tried to make Pile Simulator 3 out of floats my resources would literally decay faster than radon
+
+    // The same calculation, with doubles:
+
+    // frames = log10(0.5) / log10(1 - 1e-15)
+    // frames = -3.010 299 956 639 81e-1 / -4.342 944 819 032 52e-16
+    // frames = 6.931 471 805 599 44e14
+    // That's 366 082 years at 60 FPS
+    // A reasonable amount of time?
+
+    // How many bits in the mantissa do we need to keep 0.5 mols out of 1 mol from the beginning of the universe?
+
+    // The best estimate of the age of the universe is 13.787 billion years
+    // Apparently IUPAC has defined a year. See https://en.wikipedia.org/wiki/Year#IUPAC%E2%80%93IUGS_proposal
+    // 1 a = 31 556 925.974 7 s = 365.242 198 781 25 d, where d is defined to be exactly 86 400 s
+    // So the universe is 4.350 753 384 131 88e17 s old
+    // At 60 FPS, 2.610 452 030 479 13e19 frames have elapsed since the beginning of the universe
+    // God uses a 640x480 monitor (Terry A. Davis, n.d.), but the refresh rate is not specified
+    // 2.610 452 030 479 13e19 = log10(0.5) / log10(1 - 1e-m)
+    // Solve for m
+    // log10(1 - 1e-m) = log10(0.5) / 2.610 452 030 479 13e19
+    // 1 - 1e-m = 10^(log10(0.5) / 2.610 452 030 479 13e19)
+    // 1e-m = 1 - 10^(log10(0.5) / 2.610 452 030 479 13e19)
+    // m = -log10(1 - 10^(log10(0.5) / 2.610 452 030 479 13e19))
+    // m = 19.575 890 256 003 8 decimal digits
+    // mantissa = ceil(m * log2(10)) - 1
+    // mantissa = ceil(19.575 890 256 003 8 * 3.321 928 094 887 36) - 1
+    // mantissa = ceil(65.029 699 823 850 7) - 1
+    // So 65 bits are needed
 }
