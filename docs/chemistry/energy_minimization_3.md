@@ -26,7 +26,7 @@ Unfortunately, I am too dumb to follow the math on how the method of Lagrange mu
 The Element Potential Method treats element potentials as variables to be solved, and species moles as derived quantities
 The exact amount of a species is:
 
-x_j = e^((μ_j / RT) + [ λ_i * n_ij for i in range(a) ])
+x_j = e^(-(μ_j / RT) + [ λ_i * n_ij for i in range(a) ])
 
 (2.9 on page 6 in PDF 1. Some variables reworded to better correspond to Pile Simulator 3 docs)
 n_ij is the number of atoms of element i in species j. n_H_H2O = 2
