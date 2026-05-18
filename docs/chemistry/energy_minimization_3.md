@@ -125,3 +125,84 @@ You need to recalculate F(vec_x) and J(vec_x) every step. J(vec_x) requires m * 
 Pages 11 - 23 of PDF 1 go over the dual problem: a system of non-linear equations whose solutions correspond to element potentials, vec_lambda
 
 Unfortunately I am completely unable to follow along
+
+### As Explained by the Experts
+
+The experts are GPT-5.5 and Opus 4.7
+Go read their explanations in `docs/chemistry/dual_problem`. Nothing I write can do it justice
+You should read both: GPT-5.5's to know how to structure the matrix, and Opus 4.7's to know why this is the solution
+Such is common with the GPT and Claude families of models. You get a fuller picture by asking both
+
+Names here are exactly as written in PDF 1
+
+#### Variables
+
+- p = number of phases
+- a = number of elements
+- s = number of species
+- m = a phase
+- i = an element
+- j = a species
+- n_ij = number of atoms of element i in one molecule of species j (alternatively, number of moles of element i in one mole of species j)
+- p_i = number of moles of element i in the system
+- N_j = number of moles of species j
+- N_m = total number of moles in phase m
+- x_j = ratio of species j's moles to N_m, where m is the phase that species is in
+
+Note: "species" here = my SpeciesPhase = (species, phase) tuple. H2O (gas) and H2O (liquid) are two separate species with separate j
+
+#### Functions
+
+W = sum(m=1,p){ N_m * (Z_m - 1) } - sum(i=1,a){ λ_i * p_i }
+
+Z_m = s.Where(j => j in m).Sum(x_j)
+
+H_i = sum(j=1,s){ N_j * n_ij * x_j } - p_i
+
+W is the dual function. You want to maximize W and find a point where its gradient is vec_0
+
+Z_m is a "phase normalization residual" (GPT-5.5). Do all mole ratios in phase m sum to 1?
+
+H_i is an "element balance residual" (GPT-5.5). Are all moles of element i used?
+
+#### Solving Through Gradient Descent
+
+H_i and Z_m are actually related to ∂W:
+
+∂W/∂λ_i = H_i
+
+∂W/∂N_m = Z_m - 1 (you can define Z2_m to fold the - 1 into it, giving you the partial derivative directly)
+
+At a solution (max) of W, H_i = 0, Z_m = 1
+
+Except, since you have the partial derivatives, you can use these as the system of non-linear equations for Newton's method
+
+#### Solving Through Newton's Method
+
+Newton's Method needs a Jacobian. Depending on the quadrant, there's four forms the partial derivative can take:
+
+    +                       +
+J = | ∂H_i/∂λ_i  ∂H_i/∂N_m  |
+    | ∂Z2_m/∂λ_i ∂Z2_m/∂N_m |
+    +                       +
+
+Refer to GPT-5.5's doc for what to put as each item
+In the end, you should have an (a + p) x (a + p) matrix
+
+#### The Loop
+
+- Start with an initial guess (λ_i = 0, N_m = 42). This can be from the previous frame, since the problem is amortizable
+- Calculate x_j
+- Calculate H_i and Z2_m
+- Build F and J for Newton's method
+- Solve J(vec_x) @ Δvec_x = -F(vec_x)
+- Break apart Δλ_i and ΔN_m and apply to your guess
+- Repeat until F is below threshold
+- Get species moles n_j = N_m * x_j from phase moles and mole fractions
+
+#### Phases Appearing and Disappearing
+
+All liquid and solid species may disappear when the system favors gas too much
+This locks the system into a state where N_liquid and N_solid, and x_j for condensed phases, are not meaningful
+There apparently is a way to re-introduce condensed species but it requires intervention in an outer loop
+Details are left to the reader's imagination

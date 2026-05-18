@@ -28,9 +28,9 @@ You need to find the right amount of species that both:
 
 https://en.wikipedia.org/wiki/Lagrange_multiplier
 
-The Lagrangian function (multiple inputs, single constraints) takes the form:
+The Lagrangian function (multiple inputs, single constraint) takes the form:
 
-L(vec_x, lambda) = f(vec_x) + lambda * (g(vec_x))
+L(vec_x, lambda) = f(vec_x) + lambda * g(vec_x)
 
 Or, if you only have a single input:
 

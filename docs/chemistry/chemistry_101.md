@@ -58,6 +58,10 @@ A = Helmholtz free energy = U - TS: At constant temperature and volume, at equil
 
 Both G and A are examples of chemical potential, μ. Chemical potential is what is minimized in systems. The specific function corresponding to μ depends on whether the box can expand into surrounding pressure or is constant volume, whether it can exchange heat, whether it can exchange chemical species and what kinds, etc.
 
+When you apply heat Q to a system, if it is allowed to expand, volume V will get bigger, and some energy will be moved into the pressure-volume term PV
+If it is constant volume, all of Q will be added to internal energy U
+U and temperature T are connected, the specifics of which depends on the heat capacity function and equation of state of all of the system's contents. A higher T will be found so that thermodynamic properties remain true
+
 ## Enthalpies
 
 Processes that release energy, that are exothermic, have negative enthalpy. Burning carbon to make carbon dioxide releases energy, so the enthalpy of reaction is negative
