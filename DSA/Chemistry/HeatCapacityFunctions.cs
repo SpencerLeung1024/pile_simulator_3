@@ -153,7 +153,7 @@ public class ShomateFunction : MultiTemperatureFunction
         double t = T / 1000.0;
         double t2 = t * t;
         double t3 = t2 * t;
-        return Constants.R * (a[0] + a[1] * t + a[2] * t2 + a[3] * t3 + a[4] / t2);
+        return a[0] + a[1] * t + a[2] * t2 + a[3] * t3 + a[4] / t2;
     }
 
     public override double GetH(double T)
@@ -167,7 +167,7 @@ public class ShomateFunction : MultiTemperatureFunction
         double t2 = t * t;
         double t3 = t2 * t;
         double t4 = t3 * t;
-        return Constants.R * (a[0] * t + a[1] * t2 / 2 + a[2] * t3 / 3 - a[3] * t4 / 4 - a[4] / t + a[7]);
+        return 1000 * (a[0] * t + a[1] * t2 / 2 + a[2] * t3 / 3 - a[3] * t4 / 4 - a[4] / t + a[7]);
     }
 
     public override double GetS(double T)
