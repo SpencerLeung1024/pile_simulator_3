@@ -3,17 +3,19 @@ using System;
 
 public abstract class EquationOfState
 {
-    public abstract float GetU(float S, float v); // J / mol, molar internal energy // TODO: Is internal energy always an extensive property (scales linearly with n)?
+    public abstract float GetU(float T, float v); // J / mol, molar internal energy
     public abstract float GetP(float T, float v); // Pa, pressure
     public abstract float Getv(float T, float P); // m^3 / mol, molar volume
 }
 
 public class IdealGasEquation : EquationOfState
 {
-    public override float GetU(float S, float v)
+    public override float GetU(float T, float v)
     {
         // https://en.wikipedia.org/wiki/Mayer%27s_relation
         // c_p - c_v = R so c_v = c_p - R
+        // We need the heat capacity at constant pressure, which requires the heat capacity function
+        // TODO: Rearchitect HeatCapacityFunction, EquationOfState, and SpeciesPhase
         return (c_p - Constants.R) * T;
     }
     public override float GetP(float T, float v)
@@ -32,7 +34,7 @@ public class IncompressiblePhaseEquation : EquationOfState
 {
     public float v; // m^3 / mol, constant molar volume
 
-    public override float GetU(float S, float v)
+    public override float GetU(float T, float v)
     {
         // TODO
     }

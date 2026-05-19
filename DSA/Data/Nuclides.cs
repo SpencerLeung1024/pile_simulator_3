@@ -27,10 +27,28 @@ public class Nuclide
     public Dictionary<DecayMode, double> DecayProbabilities; // probability of decaying via that decay mode
 
     // Derived quantities
+    /*
     public uint A { get { return Z + N; } } // mass number, number of nucleons
     public double BindingEnergy { get { return BindingEnergyPerNucleon * A; } } // eV
     public double Mass { get { return Z * Constants.ProtonMass + N * Constants.NeutronMass - Constants.EnergyToMass(BindingEnergy * Constants.eV); } } // kg
     public double RelativeIsotopicMass { get { return Mass / Constants.Da; } } // Da
+    */
+    // get functions are expensive so determine at construction
+    public uint A; // mass number, number of nucleons
+    public double BindingEnergy; // eV
+    public double Mass; // kg
+    public double RelativeIsotopicMass; // Da
+
+    private void DeriveQuantities()
+    {
+        A = Z + N;
+        BindingEnergy = BindingEnergyPerNucleon * A;
+        Mass = Z * Constants.ProtonMass + N * Constants.NeutronMass - Constants.EnergyToMass(BindingEnergy * Constants.eV);
+        RelativeIsotopicMass = Mass / Constants.Da;
+    }
+
+    // Private the default constructor to prohibit creating nuclides without calculating derived quantities
+    private Nuclide() {}
 
     // Shortened constructor for stable nuclides
     public Nuclide(uint Z, uint N, double BindingEnergyPerNucleon)
@@ -40,6 +58,7 @@ public class Nuclide
         this.BindingEnergyPerNucleon = BindingEnergyPerNucleon;
         this.HalfLife = double.PositiveInfinity;
         this.DecayProbabilities = new Dictionary<DecayMode, double>();
+        DeriveQuantities();
     }
 
     // Full constructor
@@ -50,6 +69,7 @@ public class Nuclide
         this.BindingEnergyPerNucleon = BindingEnergyPerNucleon;
         this.HalfLife = HalfLifeInYears * Constants.year;
         this.DecayProbabilities = DecayProbabilities;
+        DeriveQuantities();
     }
 }
 

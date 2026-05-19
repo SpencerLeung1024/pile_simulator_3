@@ -9,5 +9,5 @@ public class Volume
     public float T; // K
     public float P; // Pa
     public float V; // m^3
-    public List<SpeciesResource> SpeciesResources; // The species and phases present in this volume, and their amounts in mol
+    public List<SpeciesPhaseResource> SpeciesPhaseResources; // The species and phases present in this volume, and their amounts in mol
 }
