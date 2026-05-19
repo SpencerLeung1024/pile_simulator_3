@@ -103,8 +103,12 @@ public static class FormulaTable
 
     // Create a view of the table containing only certain elements and species using those elements
     // ulong is a bitmask of elements
+    // The tuple contains:
+    // - the elements, as used in the view's rows
+    // - the species, as used in the view's columns
+    // - the view itself, as a 2D array of uints
     // See GetViewBitmask and GetView below
-    public static Dictionary<ulong, uint[,]> viewCache = new Dictionary<ulong, uint[,]>();
+    public static Dictionary<ulong, (Element[], Species[], uint[,])> viewCache = new Dictionary<ulong, (Element[], Species[], uint[,])>();
 
     // Pulls data from Elements, AllSpecies and AllSpeciesPhases. Make sure those are fully filled in before calling this
     public static void Initialize()
@@ -154,9 +158,9 @@ public static class FormulaTable
     }
 
     // Transforms the formula from a dictionary to a uint array in the order expected by a view
-    public static uint[] GetElementCountsFromFormula(List<Element> viewElements, Dictionary<Element, uint> formula)
+    public static uint[] GetElementCountsFromFormula(Element[] viewElements, Dictionary<Element, uint> formula)
     {
-        int view_a = viewElements.Count;
+        int view_a = viewElements.Length;
         uint[] elementCounts = new uint[view_a];
         // Initialize to 0
         for (int view_i = 0; view_i < view_a; view_i++)
@@ -177,19 +181,23 @@ public static class FormulaTable
         return elementCounts;
     }
 
-    public static uint[,] GetView(ulong bitmask)
+    public static void GetView(ulong bitmask, out Element[] viewElements, out Species[] viewSpecies, out uint[,] view)
     {
         if (bitmask == 0)
         {
             // Can't represent this view in the bitmask, so return the full table
-            return table;
+            viewElements = Elements.list;
+            viewSpecies = AllSpecies.List.ToArray();
+            view = table;
         }
         else
         {
-            viewCache.TryGetValue(bitmask, out uint[,] view);
-            if (view != null)
+            viewCache.TryGetValue(bitmask, out (Element[], Species[], uint[,]) cachedView);
+            if (cachedView != default)
             {
-                return view;
+                viewElements = cachedView.Item1;
+                viewSpecies = cachedView.Item2;
+                view = cachedView.Item3;
             }
             else
             {
@@ -199,18 +207,21 @@ public static class FormulaTable
                 // Note that view[0] may be different from Elements.list[0]
                 // If there is no hydrogen (bitmask & (1UL << 0) == 0), then view[0] will be the first element for which the bitmask has a bit, which may be helium (Z=2), lithium (Z=3), etc.
                 // This lets us operate on smaller tables and matrices
-                List<Element> viewElements = new List<Element>();
+                List<Element> viewElementsList = new List<Element>();
                 for (int table_i = 0; table_i < 64; table_i++)
                 {
                     // Get this element's bit from the bitmask
                     if ((bitmask & (1UL << table_i)) != 0)
                     {
-                        viewElements.Add(Elements.list[table_i]);
+                        viewElementsList.Add(Elements.list[table_i]);
                     }
                 }
+                // Fix as array
+                viewElements = viewElementsList.ToArray();
                 
                 int table_a = Elements.list.Length;
                 int table_s = AllSpecies.List.Count;
+                List<Species> viewSpeciesList = new List<Species>();
                 // We don't know how many species will be in the view, so use a list of lists to build it before converting to an array
                 // But we *do* know how many elements will be in each row
                 // So the *outer* structure needs to be a list, and it must be species
@@ -219,14 +230,22 @@ public static class FormulaTable
                 // Go through every species
                 for (int table_j = 0; table_j < table_s; table_j++)
                 {
-                    Dictionary<Element, uint> formula = AllSpecies.List[table_j].Formula;
+                    Species species = AllSpecies.List[table_j];
+                    Dictionary<Element, uint> formula = species.Formula;
                     uint[] elementCounts = GetElementCountsFromFormula(viewElements, formula);
-                    viewListTransposed.Add(elementCounts);
+                    // Only add if any relevant elements are non-zero
+                    if (elementCounts.Any(count => count > 0))
+                    {
+                        viewSpeciesList.Add(species);
+                        viewListTransposed.Add(elementCounts);
+                    }
                 }
+                // Fix as array
+                viewSpecies = viewSpeciesList.ToArray();
                 
                 // Convert the viewListTransposed to a 2D array
                 int view_s = viewListTransposed.Count;
-                int view_a = viewElements.Count;
+                int view_a = viewElements.Length;
                 view = new uint[view_a, view_s];
                 for (int view_i = 0; view_i < view_a; view_i++)
                 {
@@ -235,8 +254,9 @@ public static class FormulaTable
                         view[view_i, view_j] = viewListTransposed[view_j][view_i];
                     }
                 }
-                viewCache[bitmask] = view;
-                return view;
+                
+                // Put in the cache
+                viewCache[bitmask] = (viewElements, viewSpecies, view);
             }
         }
     }
