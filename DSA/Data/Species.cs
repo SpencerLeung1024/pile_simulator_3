@@ -47,7 +47,8 @@ public class SpeciesPhase
 }
 
 // An amount of a species in a phase
-public class Resource
+// Originally just called "Resource". It turns out that Godot already has a "Resource". Also I need to disambiguate between species phase resources and nuclide resources
+public class SpeciesResource
 {
     //public Species Species;
     //public Phase Phase;

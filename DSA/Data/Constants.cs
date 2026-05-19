@@ -1,4 +1,3 @@
-using Godot;
 using System;
 
 public class Constants
@@ -6,9 +5,9 @@ public class Constants
     // Physics
 
     // speed of light
-    public const float c = 2.99792458e8f; // m / s
+    public const double c = 2.99792458e8; // m / s
     // gravitational constant
-    public const float G = 6.67430e-11f; // m^3 / (kg * s^2)
+    public const double G = 6.67430e-11; // m^3 / (kg * s^2)
 
     // Chemistry
 
@@ -19,27 +18,33 @@ public class Constants
     // IUPAC SATP = (25 C, 1 atm)
     // NIST NTP = (20 C, 1 atm). Note that NIST also uses (25 C, 1 bar) for thermodynamic data, and 15 C as a temperature correction for refined petroleum products
 
-    public const float IUPACStandardTemperature = 273.15f; // K, 0 C
-    public const float NISTNormalTemperature = 293.15f; // K, 20 C
-    public const float IUPACStandardAmbientTemperature = 298.15f; // K, 25 C
+    public const double IUPACStandardTemperature = 273.15; // K, 0 C
+    public const double NISTNormalTemperature = 293.15; // K, 20 C
+    public const double IUPACStandardAmbientTemperature = 298.15; // K, 25 C
     
-    public const float bar = 1e5f; // Pa, 100 kPa
-    public const float atm = 1.01325e5f; // Pa, 101.325 kPa
+    public const double bar = 1e5; // Pa, 100 kPa
+    public const double atm = 1.01325e5; // Pa, 101.325 kPa
 
     // Avogadro constant
-    public const float N_A = 6.02214076e23f; // 1 / mol
+    public const double N_A = 6.02214076e23; // 1 / mol
     // Boltzmann constant
-    public const float k_B = 1.380649e-23f; // J / K
+    public const double k_B = 1.380649e-23; // J / K
     // Ideal gas constant = N_A * k_B
-    public const float R = 8.31446261815324f; // J / (K * mol)
+    public const double R = 8.31446261815324; // J / (K * mol)
     // Dalton (Da), unified atomic mass unit (u)
     // u is preferred but "u" is a nice variable to use in code so I use the less ambiguous "Da"
-    public const float Da = 1.66053906892e-27f; // kg
+    public const double Da = 1.66053906892e-27; // kg
     // electronvolt
-    public const float eV = 1.602176634e-19f; // J
+    public const double eV = 1.602176634e-19; // J
+
+    public const double ProtonMass = 1.0072764665789 * Da; // kg
+    public const double NeutronMass = 1.00866491606 * Da; // kg
+    public const double ElectronMass = 5.485799090441e-4 * Da; // kg  
 
     // Gameplay
-    public const float ConservationOfMassTolerance = 1e-7f; // (mol element in product - mol element in reactant) / mol element in reactant
+
+    //public const float ConservationOfMassTolerance = 1e-7f; // (mol element in product - mol element in reactant) / mol element in reactant
+    public const double ConservationOfMassTolerance = 1e-15;
 
     // floats have 23 bits in the mantissa and 24 bits of precision, which is about 7.225 decimal digits
     // doubles have 52 bits in the mantissa and 53 bits of precision, which is about 15.955 decimal digits
@@ -85,4 +90,19 @@ public class Constants
     // mantissa = ceil(19.575 890 256 003 8 * 3.321 928 094 887 36) - 1
     // mantissa = ceil(65.029 699 823 850 7) - 1
     // So 65 bits are needed
+
+    // Unscientific
+    public static double year = 31556925.9747; // s, nevermind we actually do need a year for nuclide half life
+
+    // Helper functions
+
+    public static double MassToEnergy(double mass)
+    {
+        return mass * c * c;
+    }
+
+    public static double EnergyToMass(double energy)
+    {
+        return energy / (c * c);
+    }
 }
