@@ -96,7 +96,7 @@ public class Nuclides
     // Unfortunately, NuDat provides abundances as range. Pile Simulator 3 needs a specific value with zero uncertainty, so I have made some up
 
     // Used for binding energy per nucleon for nuclides not defined here
-    // This is the total binding energy of the entire nucleus
+    // This is the total binding energy in MeV of the entire nucleus
     public static double SemiEmpiricalMassFormula(uint Z, uint N)
     {
         // There are a lot of coefficients floating around. See:
