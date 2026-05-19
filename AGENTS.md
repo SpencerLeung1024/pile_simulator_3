@@ -57,38 +57,13 @@ Only World exists right now
 - Answered by GPT-5.5 and Opus 4.7:
 - - The dual problem is a system of (num elements + num phases) non-linear equations. It combines element usage constraints and mole fraction normalization constraints. How to set it up is in `docs/chemistry/dual_problem`
 
-### Species Loading
-- Apparently NASA Chemical Equilibrium with Applications got a rewrite in December 2025 with a standalone executable and a Python package
-- - The source is publicly viewable: https://github.com/nasa/cea
-- - There is even an included NASA9 polynomial dataset: https://github.com/nasa/cea/blob/main/data/thermo.inp
-- - I have copied it to `DSA/Data/thermo.inp`
-- - It is a 15802 line text file. Here are the entries for water:
+- Species can be loaded with:
 
-``` line 5755
-H2O               Hf:Cox,1989. Woolley,1987. TRC(10/88) tuv25.
- 2 g 8/89 H   2.00O   1.00    0.00    0.00    0.00 0   18.0152800    -241826.000
-    200.000   1000.0007 -2.0 -1.0  0.0  1.0  2.0  3.0  4.0  0.0         9904.092
--3.947960830D+04 5.755731020D+02 9.317826530D-01 7.222712860D-03-7.342557370D-06
- 4.955043490D-09-1.336933246D-12                -3.303974310D+04 1.724205775D+01
-   1000.000   6000.0007 -2.0 -1.0  0.0  1.0  2.0  3.0  4.0  0.0         9904.092
- 1.034972096D+06-2.412698562D+03 4.646110780D+00 2.291998307D-03-6.836830480D-07
- 9.426468930D-11-4.822380530D-15                -1.384286509D+04-7.978148510D+00
-```
-
-``` line 12481
-H2O(cr)           Ice. Gordon,1982.
- 1 g11/99 H   2.00O   1.00    0.00    0.00    0.00 1   18.0152800    -299108.000
-    200.000    273.1507 -2.0 -1.0  0.0  1.0  2.0  3.0  4.0  0.0            0.000
--4.026777480D+05 2.747887946D+03 5.738336630D+01-8.267915240D-01 4.413087980D-03
--1.054251164D-05 9.694495970D-09                -5.530314990D+04-1.902572063D+02
-H2O(L)            Liquid. Cox,1989. Haar,1984. Keenan,1984. Stimson,1969.
- 2 g 8/01 H   2.00O   1.00    0.00    0.00    0.00 2   18.0152800    -285830.000
-    273.150    373.1507 -2.0 -1.0  0.0  1.0  2.0  3.0  4.0  0.0        13278.000
- 1.326371304D+09-2.448295388D+07 1.879428776D+05-7.678995050D+02 1.761556813D+00
--2.151167128D-03 1.092570813D-06                 1.101760476D+08-9.779700970D+05
-    373.150    600.0007 -2.0 -1.0  0.0  1.0  2.0  3.0  4.0  0.0        13278.000
- 1.263631001D+09-1.680380249D+07 9.278234790D+04-2.722373950D+02 4.479243760D-01
--3.919397430D-04 1.425743266D-07                 8.113176880D+07-5.134418080D+05
+```csharp
+Elements.BuildIndexes();
+NASA9Loader.Load("DSA/Data/thermo.inp");
+FormulaTable.Initialize();
+var subset = AllSpeciesPhases.GetSubset("CO2", "H2O", "H2O(L)", "CH4", "C(gr)", "H2", "O2");
 ```
 
 ### Nuclide Loading

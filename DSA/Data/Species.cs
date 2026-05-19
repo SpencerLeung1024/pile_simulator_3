@@ -84,14 +84,55 @@ public class SpeciesPhaseResource
     // These are all the fields of Resource. It has no methods. All chemistry logic is handled by Volume
 }
 
-public static class AllSpecies // Speciess?
+public static class AllSpecies
 {
     public static List<Species> List = new List<Species>();
+    public static Dictionary<string, Species> nameToSpecies = new Dictionary<string, Species>();
+
+    public static Species ByName(string name)
+    {
+        if (!nameToSpecies.TryGetValue(name, out var species))
+            throw new KeyNotFoundException($"Species '{name}' not found in AllSpecies");
+        return species;
+    }
+
+    public static bool TryGetSpecies(string name, out Species species)
+    {
+        return nameToSpecies.TryGetValue(name, out species);
+    }
 }
 
 public static class AllSpeciesPhases
 {
     public static List<SpeciesPhase> List = new List<SpeciesPhase>();
+    public static Dictionary<string, SpeciesPhase> nameToPhase = new Dictionary<string, SpeciesPhase>();
+
+    public static SpeciesPhase ByName(string name)
+    {
+        if (!nameToPhase.TryGetValue(name, out var phase))
+            throw new KeyNotFoundException($"SpeciesPhase '{name}' not found in AllSpeciesPhases");
+        return phase;
+    }
+
+    public static bool TryGetPhase(string name, out SpeciesPhase phase)
+    {
+        return nameToPhase.TryGetValue(name, out phase);
+    }
+
+    public static List<SpeciesPhase> GetSubset(params string[] names)
+    {
+        var result = new List<SpeciesPhase>();
+        foreach (string name in names)
+        {
+            if (nameToPhase.TryGetValue(name, out var phase))
+                result.Add(phase);
+            else if (AllSpecies.nameToSpecies.TryGetValue(name, out var species))
+                result.AddRange(species.Phases);
+            else
+                throw new KeyNotFoundException($"Neither Species nor SpeciesPhase found for '{name}'");
+        }
+        return result;
+    }
 }
 
 public static class FormulaTable
