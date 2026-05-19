@@ -86,7 +86,7 @@ public class SpeciesPhaseResource
 
 public static class AllSpecies
 {
-    public static List<Species> List = new List<Species>();
+    public static List<Species> list = new List<Species>();
     public static Dictionary<string, Species> nameToSpecies = new Dictionary<string, Species>();
 
     public static Species ByName(string name)
@@ -104,7 +104,7 @@ public static class AllSpecies
 
 public static class AllSpeciesPhases
 {
-    public static List<SpeciesPhase> List = new List<SpeciesPhase>();
+    public static List<SpeciesPhase> list = new List<SpeciesPhase>();
     public static Dictionary<string, SpeciesPhase> nameToPhase = new Dictionary<string, SpeciesPhase>();
 
     public static SpeciesPhase ByName(string name)
@@ -154,11 +154,11 @@ public static class FormulaTable
     public static void Initialize()
     {
         int a = Elements.list.Length; // The PDF uses a = num elements
-        int s = AllSpecies.List.Count; // The PDF uses s = num species
+        int s = AllSpecies.list.Count; // The PDF uses s = num species
         table = new uint[a, s];
         for (int j = 0; j < s; j++)
         {
-            Species species = AllSpecies.List[j];
+            Species species = AllSpecies.list[j];
             for (int i = 0; i < a; i++)
             {
                 Element element = Elements.list[i];
@@ -227,7 +227,7 @@ public static class FormulaTable
         {
             // Can't represent this view in the bitmask, so return the full table
             viewElements = Elements.list;
-            viewSpecies = AllSpecies.List.ToArray();
+            viewSpecies = AllSpecies.list.ToArray();
             view = table;
         }
         else
@@ -260,7 +260,7 @@ public static class FormulaTable
                 viewElements = viewElementsList.ToArray();
                 
                 int table_a = Elements.list.Length;
-                int table_s = AllSpecies.List.Count;
+                int table_s = AllSpecies.list.Count;
                 List<Species> viewSpeciesList = new List<Species>();
                 // We don't know how many species will be in the view, so use a list of lists to build it before converting to an array
                 // But we *do* know how many elements will be in each row
@@ -270,7 +270,7 @@ public static class FormulaTable
                 // Go through every species
                 for (int table_j = 0; table_j < table_s; table_j++)
                 {
-                    Species species = AllSpecies.List[table_j];
+                    Species species = AllSpecies.list[table_j];
                     Dictionary<Element, uint> formula = species.Formula;
                     uint[] elementCounts = GetElementCountsFromFormula(viewElements, formula);
                     // Only add if any relevant elements are non-zero

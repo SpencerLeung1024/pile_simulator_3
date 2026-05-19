@@ -252,7 +252,7 @@ public static class NASA9Loader
             foreach (var sp in phases)
                 sp.Species = species;
 
-            AllSpecies.List.Add(species);
+            AllSpecies.list.Add(species);
             AllSpecies.nameToSpecies[baseName] = species;
 
             foreach (var entry in entriesInGroup)
@@ -264,7 +264,7 @@ public static class NASA9Loader
 
                 if (matchingPhase != null)
                 {
-                    AllSpeciesPhases.List.Add(matchingPhase);
+                    AllSpeciesPhases.list.Add(matchingPhase);
                     AllSpeciesPhases.nameToPhase[entry.RawName] = matchingPhase;
                 }
             }
