@@ -4,8 +4,8 @@ using System.Collections.Generic;
 public abstract class HeatCapacityFunction
 {
     public abstract double Getc_p(double T); // J / (K * mol), molar heat capacity at constant pressure
-    public abstract double GetH(double T); // J / mol, molar enthalpy relative to standard enthalpy of formation
-    public abstract double GetS(double T); // J / (K * mol), molar entropy relative to standard entropy
+    public abstract double GetH(double T); // J / mol, molar enthalpy
+    public abstract double GetS(double T); // J / (K * mol), molar entropy
 }
 
 public class ConstantHeatCapacityFunction : HeatCapacityFunction

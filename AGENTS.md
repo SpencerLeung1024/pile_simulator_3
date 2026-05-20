@@ -58,44 +58,13 @@ Only World exists right now
 - Answered by GPT-5.5 and Opus 4.7:
 - - The dual problem is a system of (num elements + num phases) non-linear equations. It combines element usage constraints and mole fraction normalization constraints. How to set it up is in `docs/chemistry/dual_problem`
 
-- Species can be loaded with:
+- MainMenu.cs should do:
 
 ```csharp
 Elements.Initialize();
 AllSpecies.Initialize();
 FormulaTable.Initialize();
-```
-
-### Nuclide Loading
-- The Atomic Mass Data Center (https://www-nds.iaea.org/amdc/) provides two relevant files which I have copied
-- - `DSA/Data/mass_1.mas20.txt`, a 3594 line text file, for nuclide binding energy
-
-``` line 35
-1N-Z    N    Z   A  EL    O     MASS EXCESS           BINDING ENERGY/A        BETA-DECAY ENERGY               ATOMIC MASS
-                                   (keV)                  (keV)                    (keV)                        (micro-u)
-0  1    1    0    1  n         8071.31806     0.00044       0.0        0.0     B-    782.3470     0.0004    1 008664.91590     0.00047
-  -1    0    1    1 H          7288.971064    0.000013      0.0        0.0     B-      *                    1 007825.031898    0.000014
-0  0    1    1    2 H         13135.722895    0.000015   1112.2831     0.0002  B-      *                    2 014101.777844    0.000015
-0  1    2    1    3 H         14949.81090     0.00008    2827.2654     0.0003  B-     18.59202    0.00006   3 016049.28132     0.00008
-  -1    1    2    3 He        14931.21888     0.00006    2572.68044    0.00015 B- -13736#      2000#        3 016029.32197     0.00006
-  -3    0    3    3 Li  -pp   28667#       2000#        -2267#       667#      B-      *                    3 030775#       2147#
-0  2    3    1    4 H    -n   24621.129     100.000      1720.4491    25.0000  B-  22196.2131   100.0000    4 026431.867     107.354
-   0    2    2    4 He         2424.91587     0.00015    7073.9156     0.0002  B- -22898.2740   212.1320    4 002603.25413     0.00016
-  -2    1    3    4 Li   -p   25323.190     212.132      1153.7603    53.0330  B-      *                    4 027185.561     227.733
-```
-
-- - `nubase_4.mas20.txt`, a 5868 line text file, for half life and decay processes
-
-``` line 26
-001 0000   1n       8071.3181     0.0004                              609.8    s 0.6    1/2+*         06          1932 B-=100
-001 0010   1H       7288.971064   0.000013                            stbl              1/2+*         06          1920 IS=99.9855 78
-002 0010   2H      13135.722895   0.000015                            stbl              1+*           03          1932 IS=0.0145 78
-003 0010   3H      14949.81090    0.00008                              12.32   y 0.02   1/2+*         00          1934 B-=100
-003 0020   3He     14931.21888    0.00006                             stbl              1/2+*         98          1934 IS=0.0002 2
-003 0030   3Li     28670#      2000#                                  p-unst            3/2-#         98               p ?
-004 0010   4H      24620        100                                   139     ys 10     2-            98          1981 n=100
-004 0020   4He      2424.91587    0.00015                             stbl              0+            98          1908 IS=99.9998 2
-004 0030   4Li     25320        210                                    91     ys 9      2-            98          1965 p=100
+Nuclides.Initialize();
 ```
 
 - Implied assumptions:

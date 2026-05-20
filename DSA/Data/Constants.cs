@@ -92,6 +92,7 @@ public class Constants
     // So 65 bits are needed
 
     // Unscientific
+    
     public static double year = 31556925.9747; // s, nevermind we actually do need a year for nuclide half life
 
     // Helper functions
