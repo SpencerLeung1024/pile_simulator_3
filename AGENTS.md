@@ -61,10 +61,9 @@ Only World exists right now
 - Species can be loaded with:
 
 ```csharp
-Elements.BuildIndexes();
-NASA9Loader.Load("DSA/Data/thermo.inp");
+Elements.Initialize();
+AllSpecies.Initialize();
 FormulaTable.Initialize();
-var subset = AllSpeciesPhases.GetSubset("CO2", "H2O", "H2O(L)", "CH4", "C(gr)", "H2", "O2");
 ```
 
 ### Nuclide Loading

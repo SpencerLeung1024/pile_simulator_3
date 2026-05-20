@@ -275,8 +275,8 @@ public static class FormulaTable
                 int table_a = Elements.list.Length;
                 int table_s = AllSpecies.list.Count;
                 List<Species> viewSpeciesList = new List<Species>();
-                // We don't know how many species will be in the view, so use a list of lists to build it before converting to an array
-                // But we *do* know how many elements will be in each row
+                // We don't know how many species will be in the view, so use a list before converting to an array
+                // But we *do* know how many elements the view wants
                 // So the *outer* structure needs to be a list, and it must be species
                 List< uint[] > viewListTransposed = new List<uint[]>(); // viewListTransposed[species][element]
                 
