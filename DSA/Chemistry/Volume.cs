@@ -1,13 +1,17 @@
-using Godot;
 using System;
 using System.Collections.Generic;
 
 // A volume represents something that contains matter
-// The matter may be made up of numerous species, existing as solid, liquid, gas, and supercritical fluid phases
-public class Volume
+// The matter may be made up of numerous species, existing as gas, liquid, and solid phases
+public class Volume : Inventory<SpeciesPhaseResource>
 {
-    public float T; // K
-    public float P; // Pa
-    public float V; // m^3
-    public List<SpeciesPhaseResource> SpeciesPhaseResources; // The species and phases present in this volume, and their amounts in mol
+    // Resources: the species in phases in this volume, and their amounts in mol
+    // Mass: kg
+    // Volume: m^3
+    public double T; // K
+    public double P; // Pa
+
+    // TODO: MaybeAdd and MaybeMerge
+    // Volume is a thermodynamic simulation, so putting things in the box requires work
+    // A full theory of pumps is needed before those methods can be implemented
 }

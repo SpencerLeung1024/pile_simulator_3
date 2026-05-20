@@ -36,7 +36,7 @@ public class Nuclide
     // get functions are expensive so determine at construction
     public uint A; // mass number, number of nucleons
     public double BindingEnergy; // eV
-    public double Mass; // kg
+    public double Mass; // kg, 1 nuclide, multiply by Constants.N_A for molar mass
     public double RelativeIsotopicMass; // Da
 
     private void DeriveQuantities()
