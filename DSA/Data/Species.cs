@@ -82,10 +82,10 @@ public class SpeciesPhase
     // Chemical potential, μ, is what is minimized in a system
     // It has units of J / mol
     // How much energy do you get from increasing the system's amount of this species by 1 mol?
-    public double Getmu(double T, double P, double n_j, double n_in_phase, double V_gas)
+    public double Getmu(double T, double P, double x_j)
     {
         // Pile Simulator 3 mostly follows the formulas for an ideal gas and ideal solution
-        // mu_j = gibbs_j + RT ln(n_j / n_in_phase) + RT ln (partial_pressure_j / standard_pressure)
+        // mu_j = gibbs_j + RT ln(n_j / n_in_phase) + RT ln (P / standard_P)
         // x_j = n_j / n_in_phase, the mole fraction
         // mu_j = gibbs_term + mixing_term + pressure_term
         // Only gases have the pressure term
@@ -95,18 +95,15 @@ public class SpeciesPhase
         // The fugacity coefficient is a non-linearity from cubic equations of state
         // mu no longer represents an ideal solution, but we can get cooler effects
 
-        // molar volume
-        double v_gas = V_gas / n_j;
         // G = H - TS
         double gibbs_term = HeatCapacityFunction.GetH(T) - T * HeatCapacityFunction.GetS(T);
-        double mixing_term = Constants.R * T * Math.Log(n_j / n_in_phase);
-        double phi = Math.Exp(EquationOfState.GetLogphi(T, P, v_gas));
-        // partial_pressure_j here is calculated with the ideal gas law
-        double partial_pressure_j = Constants.R * T / v_gas;
+        double mixing_term = Constants.R * T * Math.Log(x_j);
+        double v = EquationOfState.Getv(T, P);
+        double phi = Math.Exp(EquationOfState.GetLogphi(T, P, v));
         double pressure_term = 0.0;
         if (Phase == Phase.Gas)
         {
-            pressure_term = Constants.R * T * Math.Log(phi * partial_pressure_j / Constants.bar);
+            pressure_term = Constants.R * T * Math.Log(phi * P / Constants.bar);
         }
         return gibbs_term + mixing_term + pressure_term;
     }
