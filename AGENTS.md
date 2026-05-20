@@ -41,6 +41,7 @@ Only World exists right now
 - Fail early, fail loudly. Errors are important and should not be concealed. Any fallbacks or handling should only be implemented by me after being aware
 - The scene tree reflects underlying game data. It is not the truth
 - You have no way of testing at runtime or interacting with the Godot editor. The only way to check if code works is to ask me to test
+- OpenCode explore subagents should inform their parent agent of filepaths and line ranges to read. Duplicating file contents verbatim in the output is error-prone. Only write specific content if annotations are needed
 
 ## Current
 

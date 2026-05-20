@@ -4,7 +4,9 @@ using System.Linq;
 
 public class Species
 {
-    public string Name; // "Water", "Carbon Dioxide", etc.
+    public string Name; // For maximum compatibility with our current data source (thermo.inp), this is just the raw entry with any phase information stripped
+    // "H2O" for water, "CO2" for carbon dioxide, etc.
+    // TODO: Add a separate dictionary for the "usual" name of a species, like "water" and "carbon dioxide"
     public Dictionary<Element, uint> Formula; // {H: 2, O: 1} for water
     public double omega; // acentric factor, used in Soave-Redlich-Kwong and Peng-Robinson equations of state
     public List<SpeciesPhase> Phases;
@@ -43,7 +45,13 @@ public class SpeciesPhase
 {
     public Species Species;
     public Phase Phase;
-    public string Name; // "Graphite", "Diamond", etc. for solids, otherwise PhaseEnum
+    public string Name; // "graphite", "diamond", etc. for solids, otherwise PhaseEnum
+    // UI should show contents of a Volume as:
+    // - "H2O (gas)" for gaseous water
+    // - "H2O (liquid)" for liquid water
+    // - "H2O (ice)" for solid water ("ice" comes from parsing thermo.inp)
+    // - "C (gas)" for gaseous carbon
+    // - "C (graphite)" for graphite
 
     /*
     public float StandardEnthalpyOfFormation; // J / mol, gas phase, at whatever the standard conditions are
@@ -89,16 +97,39 @@ public static class AllSpecies
     public static List<Species> list = new List<Species>();
     public static Dictionary<string, Species> nameToSpecies = new Dictionary<string, Species>();
 
-    public static Species ByName(string name)
+    private static void BuildIndexes()
     {
-        if (!nameToSpecies.TryGetValue(name, out var species))
-            throw new KeyNotFoundException($"Species '{name}' not found in AllSpecies");
-        return species;
+        foreach (Species species in list)
+        {
+            nameToSpecies[species.Name] = species;
+        }
     }
 
-    public static bool TryGetSpecies(string name, out Species species)
+    // Remember to call this somewhere when the game starts
+    public static void Initialize()
     {
-        return nameToSpecies.TryGetValue(name, out species);
+        // 2026-05-19: Our only data source is the NASA Glenn Coefficients at `DSA/Data/thermo.inp`
+        string path = "DSA/Data/thermo.inp";
+        // subset is a list of baseName
+        // See GetBaseName and BuildSpecies in NASA9Loader for details
+        List<string> subset = new List<string>()
+        {
+            "H2", // "H2" diatomic hydrogen (line 5682), "H2(L)" liquid hydrogen (line 15625). Will not include "H" monoatomic hydrogen (line 5372)
+            "C", // "C" gaseous carbon (line 1954), "C(gr)" graphite (line 15466)
+            "O2", // "O2" diatomic oxygen (line 8018), "O2(L)" liquid oxygen (line 15766)
+            "CH4", // "CH4" methane (line 2521), "CH4(L)" liquid methane (line 15506)
+            "H2O", // "H2O" gaseous water (line 5755), "H2O(L)" liquid water (line 12481), "H2O(cr)" ice (line 12476)
+            "CO2" // "CO2" carbon dioxide (line 2701)
+            // Note that I have left out "CO" carbon monoxide (line 2623). At high temperatures, CO is a significant part of the system
+            // We can always add that later, or use subset = null to load everything
+        };
+        NASA9Loader.Load(path, subset);
+        BuildIndexes();
+    }
+
+    public static Species ByName(string name)
+    {
+        return nameToSpecies[name];
     }
 }
 
@@ -107,31 +138,13 @@ public static class AllSpeciesPhases
     public static List<SpeciesPhase> list = new List<SpeciesPhase>();
     public static Dictionary<string, SpeciesPhase> nameToPhase = new Dictionary<string, SpeciesPhase>();
 
+    // nameToPhase is built by NASA9Loader
+    // It contains the raw names from thermo.inp, like "H2O(L)", "C(gr)", etc.
+    // There is a rationale behind it, but it is not the same as Pile Simulator 3
+
     public static SpeciesPhase ByName(string name)
     {
-        if (!nameToPhase.TryGetValue(name, out var phase))
-            throw new KeyNotFoundException($"SpeciesPhase '{name}' not found in AllSpeciesPhases");
-        return phase;
-    }
-
-    public static bool TryGetPhase(string name, out SpeciesPhase phase)
-    {
-        return nameToPhase.TryGetValue(name, out phase);
-    }
-
-    public static List<SpeciesPhase> GetSubset(params string[] names)
-    {
-        var result = new List<SpeciesPhase>();
-        foreach (string name in names)
-        {
-            if (nameToPhase.TryGetValue(name, out var phase))
-                result.Add(phase);
-            else if (AllSpecies.nameToSpecies.TryGetValue(name, out var species))
-                result.AddRange(species.Phases);
-            else
-                throw new KeyNotFoundException($"Neither Species nor SpeciesPhase found for '{name}'");
-        }
-        return result;
+        return nameToPhase[name];
     }
 }
 

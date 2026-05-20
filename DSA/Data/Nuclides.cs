@@ -84,6 +84,9 @@ public class Nuclides
     // 178 = 177 neutrons + 1 so that table[z=1,n=0] is hydrogen-1
     // Not a free proton. It has 13.6 eV of binding energy
 
+    // Nevermind oganesson-295 exists now (Z: 118, N: 177)
+    // line 5868 of `DSA/Data/nubase_4.mas20.txt`
+
     public static Dictionary< Element, Dictionary<Nuclide, double> > abundances = new Dictionary< Element, Dictionary<Nuclide, double> >();
     // abundances[element] = dictionary of nuclide to abundance
     // abundances[hydrogen] = { hydrogen-1: 0.999 844, hydrogen-2: 0.000 156 }

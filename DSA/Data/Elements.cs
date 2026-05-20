@@ -150,14 +150,20 @@ public class Elements
     public static Dictionary<string, Element> nameToElement = new Dictionary<string, Element>();
     public static Dictionary<string, Element> symbolToElement = new Dictionary<string, Element>();
 
-    // Remember to call this somewhere when the game starts
-    public static void BuildIndexes()
+    private static void BuildIndexes()
     {
         foreach (Element element in list)
         {
             nameToElement[element.Name] = element;
             symbolToElement[element.Symbol] = element;
         }
+    }
+
+    // Remember to call this somewhere when the game starts
+    public static void Initialize()
+    {
+        // No external file needs to be loaded
+        BuildIndexes();
     }
 
     public static Element ByName(string name)

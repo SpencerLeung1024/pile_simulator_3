@@ -18,11 +18,11 @@ public static class NASA9Loader
         public List<(double Tlow, double Thigh, double[] a)> Intervals;
     }
 
-    public static void Load(string path)
+    public static void Load(string path, List<string> subset = null)
     {
         var lines = File.ReadAllLines(path);
         var entries = ParseFile(lines);
-        BuildSpecies(entries);
+        BuildSpecies(entries, subset);
     }
 
     private static List<RawEntry> ParseFile(string[] lines)
@@ -178,7 +178,7 @@ public static class NASA9Loader
         return double.Parse(s.Replace('D', 'E'));
     }
 
-    private static void BuildSpecies(List<RawEntry> entries)
+    private static void BuildSpecies(List<RawEntry> entries, List<string> subset)
     {
         var entriesBySpecies = entries
             .Where(e => e.Elements.Count > 0 && e.Elements.Values.All(v => Math.Abs(v - Math.Round(v)) < 0.01))
@@ -208,6 +208,10 @@ public static class NASA9Loader
                 else
                     baseName += (first.Charge > 0 ? "+" : "-") + absCharge;
             }
+
+            // If we want a subset, skip species if not in the subset
+            if (subset != null && !subset.Contains(baseName))
+                continue;
 
             var phases = new List<SpeciesPhase>();
             foreach (var entry in entriesInGroup)
