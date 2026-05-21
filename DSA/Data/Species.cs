@@ -230,17 +230,18 @@ public static class FormulaTable
     // - the species, as used in the view's columns
     // - the view itself, as a 2D array of uints
     // See GetViewBitmask and GetView below
-    public static Dictionary<ulong, (Element[], Species[], uint[,])> viewCache = new Dictionary<ulong, (Element[], Species[], uint[,])>();
+    public static Dictionary<ulong, (Element[], SpeciesPhase[], uint[,])> viewCache = new Dictionary<ulong, (Element[], SpeciesPhase[], uint[,])>();
 
     // Pulls data from Elements, AllSpecies and AllSpeciesPhases. Make sure those are fully filled in before calling this
     public static void Initialize()
     {
         int a = Elements.list.Length; // The PDF uses a = num elements
-        int s = AllSpecies.list.Count; // The PDF uses s = num species
+        int s = AllSpeciesPhases.list.Count; // The PDF uses s = num species
         table = new uint[a, s];
         for (int j = 0; j < s; j++)
         {
-            Species species = AllSpecies.list[j];
+            SpeciesPhase speciesPhase = AllSpeciesPhases.list[j];
+            Species species = speciesPhase.Species;
             for (int i = 0; i < a; i++)
             {
                 Element element = Elements.list[i];
@@ -303,18 +304,18 @@ public static class FormulaTable
         return elementCounts;
     }
 
-    public static void GetView(ulong bitmask, out Element[] viewElements, out Species[] viewSpecies, out uint[,] view)
+    public static void GetView(ulong bitmask, out Element[] viewElements, out SpeciesPhase[] viewSpecies, out uint[,] view)
     {
         if (bitmask == 0)
         {
             // Can't represent this view in the bitmask, so return the full table
             viewElements = Elements.list;
-            viewSpecies = AllSpecies.list.ToArray();
+            viewSpecies = AllSpeciesPhases.list.ToArray();
             view = table;
         }
         else
         {
-            viewCache.TryGetValue(bitmask, out (Element[], Species[], uint[,]) cachedView);
+            viewCache.TryGetValue(bitmask, out (Element[], SpeciesPhase[], uint[,]) cachedView);
             if (cachedView != default)
             {
                 viewElements = cachedView.Item1;
@@ -342,8 +343,8 @@ public static class FormulaTable
                 viewElements = viewElementsList.ToArray();
                 
                 int table_a = Elements.list.Length;
-                int table_s = AllSpecies.list.Count;
-                List<Species> viewSpeciesList = new List<Species>();
+                int table_s = AllSpeciesPhases.list.Count;
+                List<SpeciesPhase> viewSpeciesList = new List<SpeciesPhase>();
                 // We don't know how many species will be in the view, so use a list before converting to an array
                 // But we *do* know how many elements the view wants
                 // So the *outer* structure needs to be a list, and it must be species
@@ -352,13 +353,14 @@ public static class FormulaTable
                 // Go through every species
                 for (int table_j = 0; table_j < table_s; table_j++)
                 {
-                    Species species = AllSpecies.list[table_j];
+                    SpeciesPhase speciesPhase = AllSpeciesPhases.list[table_j];
+                    Species species = speciesPhase.Species;
                     Dictionary<Element, uint> formula = species.Formula;
                     uint[] elementCounts = GetElementCountsFromFormula(viewElements, formula);
                     // Only add if any relevant elements are non-zero
                     if (elementCounts.Any(count => count > 0))
                     {
-                        viewSpeciesList.Add(species);
+                        viewSpeciesList.Add(speciesPhase);
                         viewListTransposed.Add(elementCounts);
                     }
                 }

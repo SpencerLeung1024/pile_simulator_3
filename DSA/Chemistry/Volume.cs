@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Godot;
 
 // A volume represents something that contains matter
 // The matter may be made up of numerous species, existing as gas, liquid, and solid phases
@@ -20,7 +21,7 @@ public class Volume : Inventory<SpeciesPhaseResource>
     // G = H - TS, Gibbs free energy of the system
     private ulong bitmask;
     private double[] vec_lambda;
-    private double[] vec_n; // [n_gas, n_liquid, n_solid] (enum Phase order)
+    private double[] vec_n = new double[3]; // [n_gas, n_liquid, n_solid] (enum Phase order)
 
     protected override void DeriveQuantities()
     {
@@ -78,9 +79,181 @@ public class Volume : Inventory<SpeciesPhaseResource>
         return freeElements;
     }
 
-    private void SolveReactions()
+    private void SolveReactions(Dictionary<Element, double> freeElements)
     {
-        
+        Element[] viewElements; // i = an element, a = num elements, elements are in order of increasing Z
+        SpeciesPhase[] viewSpecies; // j = a species, s = num species, unordered, but consistent with the order of their addition to AllSpeciesPhases
+        uint[,] view; // view[i, j] = n_ij = count of element i in species j
+        FormulaTable.GetView(bitmask, out viewElements, out viewSpecies, out view);
+        int a = viewElements.Length;
+        int s = viewSpecies.Length;
+
+        // Turn the free elements dict into a vector
+        double[] vec_p = new double[a]; // p_i = mol of element i available for reactions
+        for (int i = 0; i < a; i++)
+        {
+            Element element = viewElements[i];
+            freeElements.TryGetValue(element, out double p_i);
+            if (p_i != default)
+            {
+                vec_p[i] = p_i;
+            }
+            else
+            {
+                vec_p[i] = 0.0;
+            }
+        }
+
+        // Include any existing moles of each species when calculating chemical potential
+        double[] vec_moles_existing = new double[s];
+        foreach (SpeciesPhaseResource resource in Resources)
+        {
+            int j = Array.IndexOf(viewSpecies, resource.SpeciesPhase);
+            if (j != -1)
+            {
+                vec_moles_existing[j] = resource.n;
+            }
+        }
+
+        double[] vec_x = new double[s]; // x_j = mole fraction of species j in its phase
+        int[] speciesToPhase = new int[s];
+        for (int j = 0; j < s; j++)
+        {
+            int phase = (int)viewSpecies[j].Phase;
+            speciesToPhase[j] = phase;
+            double mu_j = viewSpecies[j].Getmu(T, P, vec_moles_existing[j] / vec_n[phase]);
+            double sum = 0.0;
+            for (int i = 0; i < a; i++)
+            {
+                sum += vec_lambda[i] * view[i,j];
+            }
+            // (2.9) in the STANJAN PDF
+            vec_x[j] = Math.Exp((-mu_j / (Constants.R * T) + sum));
+        }
+
+        // J @ Δx = -F
+        // Ax = b
+
+        // Build F
+        double[] vec_F = new double[a + 3];
+        // Calculate element balance residuals
+        for (int i = 0; i < a; i++)
+        {
+            double H_i = 0.0;
+            for (int j = 0; j < s; j++)
+            {
+                double N_j = vec_n[speciesToPhase[j]]; // Total moles in phase m
+                uint n_ij = view[i, j]; // Count of element i in species j
+                double x_j = vec_x[j]; // Mole fraction of species j in its phase
+                H_i += N_j * n_ij * x_j;
+            }
+            double p_i = vec_p[i]; // Moles of element i available for reactions
+            H_i -= p_i;
+            vec_F[i] = H_i;
+        }
+        // Calculate phase normalization residuals
+        double[] vec_Z = new double[3];
+        for (int j = 0; j < s; j++)
+        {
+            int phase = speciesToPhase[j];
+            vec_Z[phase] += vec_x[j];
+        }
+        for (int m = 0; m < 3; m++)
+        {
+            vec_F[a + m] = vec_Z[m] - 1.0;
+        }
+
+        // Build J
+        // Refer to `docs/chemistry/dual_problem/gpt_5_5.md`
+        double[,] J = new double[a + 3, a + 3];
+        // Build quadrant Q
+        for (int i = 0; i < a; i++)
+        {
+            for (int k = 0; k < a; k++) // k is another element
+            {
+                double Q_ik = 0.0;
+                for (int j = 0; j < s; j++)
+                {
+                    double N_m = vec_n[speciesToPhase[j]];
+                    uint n_ij = view[i, j];
+                    uint n_kj = view[k, j];
+                    double x_j = vec_x[j];
+                    Q_ik += N_m * n_ij * n_kj * x_j;
+                }
+                J[i, k] = Q_ik;
+            }
+        }
+        // Build quadrant D
+        for (int i = 0; i < a; i++)
+        {
+            double[] vec_D_i = new double[3]; // This is a row vector
+            // It's faster if we go through all j once, incrementing D_ij correspondingly
+            for (int j = 0; j < s; j++)
+            {
+                int m = speciesToPhase[j];
+                uint n_ij = view[i, j];
+                double x_j = vec_x[j];
+                vec_D_i[m] += n_ij * x_j;
+            }
+            for (int m = 0; m < 3; m++)
+            {
+                J[i, a + m] = vec_D_i[m];
+                // Also build quadrant D.T
+                J[a + m, i] = vec_D_i[m];
+            }
+        }
+        // Build quadrant 0
+        for (int m1 = 0; m1 < 3; m1++)
+        {
+            for (int m2 = 0; m2 < 3; m2++)
+            {
+                J[m1, m2] = 0.0;
+            }
+        }
+
+        // Build Δx
+        double[] delta_x = new double[a + 3];
+
+        // Solve
+        // TODO
+
+        // Apply Δx
+        for (int i = 0; i < a; i++)
+        {
+            vec_lambda[i] += delta_x[i];
+        }
+        for (int m = 0; m < 3; m++)
+        {
+            vec_n[m] += delta_x[a + m];
+        }
+
+        // Recalculate x_j
+        for (int j = 0; j < s; j++)
+        {
+            int phase = speciesToPhase[j];
+            double mu_j = viewSpecies[j].Getmu(T, P, vec_moles_existing[j] / vec_n[phase]);
+            double sum = 0.0;
+            for (int i = 0; i < a; i++)
+            {
+                sum += vec_lambda[i] * view[i,j];
+            }
+            vec_x[j] = Math.Exp((-mu_j / (Constants.R * T) + sum));
+        }
+
+        // Restore moles of each species
+        for (int j = 0; j < s; j++)
+        {
+            int phase = speciesToPhase[j];
+            double N_m = vec_n[phase];
+            double x_j = vec_x[j];
+            double n_j = N_m * x_j;
+            // Figure out which resource this species corresponds to
+            SpeciesPhase speciesPhase = viewSpecies[j];
+            foreach (SpeciesPhaseResource resource in Resources.Where(r => r.SpeciesPhase == speciesPhase)) // Should run 0 or 1 times
+            {
+                resource.n = n_j;
+            }
+        }
     }
 
     private void SolvePhases()
@@ -136,12 +309,13 @@ public class Volume : Inventory<SpeciesPhaseResource>
 
         Dictionary<Element, double> freeElements = Dissociate();
 
-        List<Element> elementList = freeElements.Keys.ToList();
-        ulong newBitmask = FormulaTable.GetViewBitmask(elementList);
+        List<Element> elementList = freeElements.Keys.ToList(); // Unordered
+        ulong newBitmask = FormulaTable.GetViewBitmask(elementList); // ulong is ordered from gadolinium (bit 63) to hydrogen (bit 0)
         if (newBitmask != bitmask)
         {
             // Invalidate last frame's solution
             bitmask = newBitmask;
+            vec_lambda = new double[elementList.Count];
             for (int i = 0; i < vec_lambda.Length; i++)
             {
                 vec_lambda[i] = 0.0; // Restart with all elements having zero element potential
@@ -156,7 +330,7 @@ public class Volume : Inventory<SpeciesPhaseResource>
         {
             double Ustart = U;
 
-            SolveReactions();
+            SolveReactions(freeElements);
             SolvePhases();
             DeriveQuantities();
 
