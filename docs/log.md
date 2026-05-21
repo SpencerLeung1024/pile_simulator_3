@@ -1,5 +1,9 @@
 # Log
 
+## 2026-05-20: Only SolveReaction and ApplyHeat remaining
+- After days of staring at Wikipedia articles far from my area of expertise, I think it's near
+- Now pulling data from thermo.inp, mass_1.mas20.txt, and nubase_4.mas20.txt
+
 ## 2026-05-17: Chemistry 201
 - Asked DeepSeek V4 Pro how to architect the chemistry system
 - Actually read about the method of Lagrange multipliers and realized it would be easier than iterative dissociation + recombination

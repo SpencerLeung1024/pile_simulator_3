@@ -9,19 +9,26 @@ public class Nuclide
     public double HalfLife; // s
     public Dictionary<string, double> DecayProbabilities; // nubase code -> branching ratio (0-100)
 
+    // Derived quantities
     public uint A;
     public double BindingEnergy; // eV
-    public double Mass; // kg
-    public double RelativeIsotopicMass; // Da
+    public double NuclideMass; // kg, Z + N - binding energy
+    public double AtomicMass; // kg, Z + N - binding energy + e
+    public double MolarMass; // kg, atomic mass * N_A
+    public double RelativeIsotopicMass; // technically dimensionless but can be multiplied by Da to get atomic mass, atomic mass / (1/12) of carbon-12
 
     private void DeriveQuantities()
     {
         A = Z + N;
         BindingEnergy = BindingEnergyPerNucleon * A;
-        Mass = Z * Constants.ProtonMass + N * Constants.NeutronMass - Constants.EnergyToMass(BindingEnergy * Constants.eV);
-        RelativeIsotopicMass = Mass / Constants.Da;
+        double bindingEnergyAsMass = Constants.EnergyToMass(BindingEnergy);
+        NuclideMass = Z * Constants.ProtonMass + N * Constants.NeutronMass - bindingEnergyAsMass;
+        AtomicMass = NuclideMass + Z * Constants.ElectronMass;
+        MolarMass = AtomicMass * Constants.N_A;
+        RelativeIsotopicMass = AtomicMass / Constants.Da;
     }
 
+    // Private the default constructor to prohibit creating nuclides without calculating derived quantities
     private Nuclide() {}
 
     public Nuclide(uint Z, uint N, double BindingEnergyPerNucleon_eV, double HalfLife_s, Dictionary<string, double> DecayProbabilities)

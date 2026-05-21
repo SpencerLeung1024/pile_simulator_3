@@ -91,6 +91,10 @@ public class Constants
     // mantissa = ceil(65.029 699 823 850 7) - 1
     // So 65 bits are needed
 
+    public const uint MaxSteps = 20;
+
+    public const double DissociationThreshold = 1e-3; // fraction per frame, 0.1%
+
     // Unscientific
     
     public static double year = 31556925.9747; // s, nevermind we actually do need a year for nuclide half life

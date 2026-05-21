@@ -9,15 +9,20 @@ public class Species
     // TODO: Add a separate dictionary for the "usual" name of a species, like "water" and "carbon dioxide"
     public Dictionary<Element, uint> Formula; // {H: 2, O: 1} for water
     public double omega; // acentric factor, used in Soave-Redlich-Kwong and Peng-Robinson equations of state
+    public double DissociationTemperature; // K, unscientific, used in Pile Simulator 3's reaction simulation
+    // Protects certain species like diamond which would spontaneously convert to graphite at standard conditions
+    // Prevents things from combusting at standard conditions
     public List<SpeciesPhase> Phases;
 
     // Derived quantities
     //public double MolarMass { get { return Formula.Sum(kv => kv.Key.A_r * kv.Value); } } // kg / mol
     public double MolarMass; // Doing a sum every time is expensive so determine this value at construction
+    public double DissociationActivationEnergy; // J / mol, unscientific, used in an Arrhenius equation
 
     private void DeriveQuantities()
     {
         MolarMass = Formula.Sum(kv => kv.Key.A_r * kv.Value);
+        DissociationActivationEnergy = -Math.Log(Constants.DissociationThreshold) * Constants.R * DissociationTemperature;
     }
 
     // Private the default constructor to prohibit creating species without calculating derived quantities
@@ -98,11 +103,11 @@ public class SpeciesPhase
         // G = H - TS
         double gibbs_term = HeatCapacityFunction.GetH(T) - T * HeatCapacityFunction.GetS(T);
         double mixing_term = Constants.R * T * Math.Log(x_j);
-        double v = EquationOfState.Getv(T, P);
-        double phi = Math.Exp(EquationOfState.GetLogphi(T, P, v));
         double pressure_term = 0.0;
         if (Phase == Phase.Gas)
         {
+            double v = EquationOfState.Getv(T, P);
+            double phi = Math.Exp(EquationOfState.GetLogphi(T, P, v));
             pressure_term = Constants.R * T * Math.Log(phi * P / Constants.bar);
         }
         return gibbs_term + mixing_term + pressure_term;
@@ -117,7 +122,7 @@ public class SpeciesPhaseResource
     //public Phase Phase;
     // Normalize. SpeciesPhase contains both Species and Phase, so don't store them separately (avoid potential for inconsistency)
     public SpeciesPhase SpeciesPhase;
-    public float n; // mol
+    public double n; // mol
     // These are all the fields of Resource. It has no methods. All chemistry logic is handled by Volume
 }
 
@@ -153,6 +158,19 @@ public static class AllSpecies
             // We can always add that later, or use subset = null to load everything
         };
         NASA9Loader.Load(path, subset);
+
+        // But thermo.inp does not have critical temperature, pressure, or molar volume
+        // It assumes everything is an ideal gas and condensed phases have zero volume
+        // We need to make up an equation of state for all phases
+        AllSpeciesPhases.MakeUpEquationsOfState();
+
+        // We also need to give every species a dissociation temperature
+        // Placeholder: 600 K (327 C) for everything
+        foreach (Species species in list)
+        {
+            species.DissociationTemperature = 600.0;
+        }
+
         BuildIndexes();
     }
 
@@ -170,6 +188,28 @@ public static class AllSpeciesPhases
     // nameToPhase is built by NASA9Loader
     // It contains the raw names from thermo.inp, like "H2O(L)", "C(gr)", etc.
     // There is a rationale behind it, but it is not the same as Pile Simulator 3
+
+    public static void MakeUpEquationsOfState()
+    {
+        foreach(SpeciesPhase speciesPhase in list)
+        {
+            if (speciesPhase.Phase == Phase.Gas)
+            {
+                speciesPhase.EquationOfState = new IdealGasEquation()
+                {
+                    SpeciesPhase = speciesPhase
+                };
+            }
+            else
+            {
+                speciesPhase.EquationOfState = new IncompressiblePhaseEquation()
+                {
+                    SpeciesPhase = speciesPhase,
+                    v = 0.0
+                };
+            }
+        }
+    }
 
     public static SpeciesPhase ByName(string name)
     {

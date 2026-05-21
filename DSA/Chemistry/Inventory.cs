@@ -39,7 +39,7 @@ public class NuclideInventory : Inventory<NuclideResource>
         UsedVolume = 0;
         foreach (NuclideResource resource in Resources)
         {
-            Mass += resource.nuclide.Mass * Constants.N_A * resource.n;
+            Mass += resource.nuclide.MolarMass * resource.n;
             UsedVolume += GetVolumeOfResource(resource);
         }
     }
