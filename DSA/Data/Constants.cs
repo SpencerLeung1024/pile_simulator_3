@@ -92,14 +92,22 @@ public class Constants
     // So 65 bits are needed
 
     public const double DissociationThreshold = 1e-3; // fraction per frame, 0.1%
+
     public const uint MaxReactionSteps = 20;
-    public const uint MaxUTSteps = 20;
-    public const uint MaxVPSteps = 20;
-    
     public const double N_mMin = 1e-6; // mol, N_m for phase m is clamped to be > this after every Newton step
+    public const double H_iTolerance = 1e-6; // mol element i unused, an early exit condition for SolveReactions
+    public const double Z_mTolerance = 1e-6; // mole fraction of phase m away from 1, an early exit condition for SolveReactions
     public const double n_jMin = 1e-6; // mol, a species will not be realized if its calculated amount is < this
     // Instead, the elements it would have consumed are returned to freeElements
     // For comparison, Stationeers uses 0.001 mmol as the deletion threshold, below which a species (and any mass it embodies) vanishes
+
+    public const uint MaxUTSteps = 20;
+    public const double UTolerance = 1e-6; // (J actual - J target) / J target, an early exit condition for SolveUT
+    public const double Tmin = 1e-6; // K, avoid going below absolute zero
+
+    public const uint MaxVPSteps = 20;
+    public const double VTolerance = 1e-6; // (m^3 actual - m^3 target) / m^3 target, an early exit condition for SolveVP
+    public const double Pmin = 1e-6; // Pa, avoid going below a vacuum
 
     // Unscientific
     

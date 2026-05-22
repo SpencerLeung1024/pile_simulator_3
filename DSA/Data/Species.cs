@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics.LinearAlgebra;
-using MathNet.Numerics.LinearAlgebra.Double;
 
 public class Species
 {
@@ -257,13 +256,10 @@ public static class FormulaTable
         {
             SpeciesPhase speciesPhase = AllSpeciesPhases.list[j];
             Species species = speciesPhase.Species;
-            for (int i = 0; i < a; i++)
+            foreach ((Element element, uint count) in species.Formula)
             {
-                foreach ((Element element, uint count) in species.Formula)
-                {
-                    int i = (int)element.Z - 1; // hydrogen.Z = 1 but i should be 0
-                    table[i, j] = (double)count;
-                }
+                int i = (int)element.Z - 1; // hydrogen.Z = 1 but i should be 0
+                table[i, j] = (double)count;
             }
         }
     }
@@ -313,112 +309,58 @@ public static class FormulaTable
             {
                 // Create the view and cache it
 
-                // **OpenCode entry point**
-                // Does Math.NET have any operators to help with getting a view of a matrix?
-            }
-        }
-    }
-
-    // Transforms the formula from a dictionary to a uint array in the order expected by a view
-    public static uint[] GetElementCountsFromFormula(Element[] viewElements, Dictionary<Element, uint> formula)
-    {
-        int view_a = viewElements.Length;
-        uint[] elementCounts = new uint[view_a];
-        // Initialize to 0
-        for (int view_i = 0; view_i < view_a; view_i++)
-        {
-            elementCounts[view_i] = 0;
-        }
-        foreach (KeyValuePair<Element, uint> kv in formula)
-        {
-            Element element = kv.Key;
-            uint count = kv.Value;
-            int view_i = viewElements.IndexOf(element);
-            if (view_i != -1)
-            {
-                elementCounts[view_i] = count;
-            }
-            // Otherwise this element is not in the view, so it should be ignored
-        }
-        return elementCounts;
-    }
-
-    public static void GetView(ulong bitmask, out Element[] viewElements, out SpeciesPhase[] viewSpecies, out Matrix<double> view)
-    {
-        if (bitmask == 0)
-        {
-            // Can't represent this view in the bitmask, so return the full table
-            viewElements = Elements.list;
-            viewSpecies = AllSpeciesPhases.list.ToArray();
-            view = table;
-        }
-        else
-        {
-            viewCache.TryGetValue(bitmask, out (Element[], SpeciesPhase[], uint[,]) cachedView);
-            if (cachedView != default)
-            {
-                viewElements = cachedView.Item1;
-                viewSpecies = cachedView.Item2;
-                view = cachedView.Item3;
-            }
-            else
-            {
-                // Create the view and cache it
-
-                // Build the view's list of elements
-                // Note that view[0] may be different from Elements.list[0]
-                // If there is no hydrogen (bitmask & (1UL << 0) == 0), then view[0] will be the first element for which the bitmask has a bit, which may be helium (Z=2), lithium (Z=3), etc.
-                // This lets us operate on smaller tables and matrices
                 List<Element> viewElementsList = new List<Element>();
+                List<SpeciesPhase> viewSpeciesList = new List<SpeciesPhase>();
+                // Fill these in as we discover i and j below
+
+                // "Only for contiguous ranges. Math.NET's SubMatrix(rowStart, rowCount, colStart, colCount) creates a view over contiguous rows/columns. For the arbitrary non-contiguous selection you need (bitmask-based), there's no built-in view." - DeepSeek V4 Pro
+
+                // Math.NET DenseMatrix uses column-major storage (Fortran order).
+                // If I really wanted to be fast I would transpose the table before getting element rows, but it probably doesn't matter in the end
+                // table and view should remain [i, j] though. The heavy work in Volume.SolveReactions hits different i of the same j more often than different j of the same i, so column-major is better overall
+
+                // Our algorithm will be:
+                // 1. Keep only rows (elements) that are in the bitmask
+                // 2. Keep only columns (species) that have non-zero counts
+
+                // 1.
+                List< Vector<double> > viewRowsList = new List< Vector<double> >(); // viewRowsList[i] = row i of the view, as a vector
                 for (int table_i = 0; table_i < 64; table_i++)
                 {
                     // Get this element's bit from the bitmask
                     if ((bitmask & (1UL << table_i)) != 0)
                     {
                         viewElementsList.Add(Elements.list[table_i]);
+                        viewRowsList.Add(table.Row(table_i));
                     }
                 }
-                // Fix as array
+
+                Matrix<double> tempMatrix = Matrix<double>.Build.DenseOfRowVectors(viewRowsList);
+
+                // 2.
+                List< Vector<double> > viewColsList = new List< Vector<double> >(); // viewColsList[j] = column j of the view, as a vector
+                for (int table_j = 0; table_j < AllSpeciesPhases.list.Count; table_j++)
+                {
+                    Vector<double> col = tempMatrix.Column(table_j);
+                    // "Sum() is a native Math.NET method, SIMD-accelerated, and avoids LINQ delegate overhead."
+                    // IEnumerable.Any has early exit but the overhead probably makes it worse in this case
+                    if (col.Sum() > 0.0) // double Vector<double>.Sum()
+                    //if (col.Max() > 0.0) // (extension) double IEnumerable<double>.Max()
+                    //if (col.Any(value => value > 0.0)) // (extension) bool IEnumerable<double>.Any<double>(Func<double, bool> predicate)
+                    {
+                        viewSpeciesList.Add(AllSpeciesPhases.list[table_j]);
+                        viewColsList.Add(col);
+                    }
+                }
+
+                // Build the view
+                view = Matrix<double>.Build.DenseOfColumnVectors(viewColsList);
+
+                // Fix the lists as arrays
                 viewElements = viewElementsList.ToArray();
-                
-                int table_a = Elements.list.Length;
-                int table_s = AllSpeciesPhases.list.Count;
-                List<SpeciesPhase> viewSpeciesList = new List<SpeciesPhase>();
-                // We don't know how many species will be in the view, so use a list before converting to an array
-                // But we *do* know how many elements the view wants
-                // So the *outer* structure needs to be a list, and it must be species
-                List< uint[] > viewListTransposed = new List<uint[]>(); // viewListTransposed[species][element]
-                
-                // Go through every species
-                for (int table_j = 0; table_j < table_s; table_j++)
-                {
-                    SpeciesPhase speciesPhase = AllSpeciesPhases.list[table_j];
-                    Species species = speciesPhase.Species;
-                    Dictionary<Element, uint> formula = species.Formula;
-                    uint[] elementCounts = GetElementCountsFromFormula(viewElements, formula);
-                    // Only add if any relevant elements are non-zero
-                    if (elementCounts.Any(count => count > 0))
-                    {
-                        viewSpeciesList.Add(speciesPhase);
-                        viewListTransposed.Add(elementCounts);
-                    }
-                }
-                // Fix as array
                 viewSpecies = viewSpeciesList.ToArray();
-                
-                // Convert the viewListTransposed to a 2D array
-                int view_s = viewListTransposed.Count;
-                int view_a = viewElements.Length;
-                view = new uint[view_a, view_s];
-                for (int view_i = 0; view_i < view_a; view_i++)
-                {
-                    for (int view_j = 0; view_j < view_s; view_j++)
-                    {
-                        view[view_i, view_j] = viewListTransposed[view_j][view_i];
-                    }
-                }
-                
-                // Put in the cache
+
+                // Cache the view
                 viewCache[bitmask] = (viewElements, viewSpecies, view);
             }
         }
