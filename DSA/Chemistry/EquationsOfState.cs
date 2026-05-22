@@ -4,20 +4,25 @@ public abstract class EquationOfState
 {
     public SpeciesPhase SpeciesPhase; // Parent reference for heat capacity function and phase enum
 
+    public abstract double Getc_v(double T, double v); // J / (K * mol), molar heat capacity at constant volume = (dU/dT)_v
     public abstract double GetU(double T, double v); // J / mol, molar internal energy
     public abstract double GetP(double T, double v); // Pa, pressure
     public abstract double Getv(double T, double P); // m^3 / mol, molar volume
-    public abstract double GetLogphi(double T, double P, double v); // dimensionless, ln(ϕ) where ϕ is the fugacity coefficient
+    public abstract double GetLogphi(double T, double P, double v); // dimensionless, ln(φ) where φ is the fugacity coefficient
 }
 
 public class IdealGasEquation : EquationOfState
 {
+    public override double Getc_v(double T, double v)
+    {
+        return SpeciesPhase.HeatCapacityFunction.Getc_p(T) - Constants.R;
+    }
     public override double GetU(double T, double v)
     {
-        // https://en.wikipedia.org/wiki/Mayer%27s_relation
-        // c_p - c_v = R so c_v = c_p - R
-        double c_p = SpeciesPhase.HeatCapacityFunction.Getc_p(T);
-        return (c_p - Constants.R) * T;
+        // dU = C_v dT, C_v = C_p - R (Mayer's relation)
+        // U(T) = H(T) - RT where H(T) = ∫₀ᵀ C_p(T') dT' + H_f°
+        // This includes formation enthalpy and properly integrates variable C_p
+        return SpeciesPhase.HeatCapacityFunction.GetH(T) - Constants.R * T;
     }
     public override double GetP(double T, double v)
     {
@@ -40,6 +45,12 @@ public class IncompressiblePhaseEquation : EquationOfState
 {
     public double v; // m^3 / mol, constant molar volume
 
+    public override double Getc_v(double T, double v)
+    {
+        // For an incompressible condensed phase, PV work is negligible
+        // dU ≈ dH = C_p dT, so C_v ≈ C_p
+        return SpeciesPhase.HeatCapacityFunction.Getc_p(T);
+    }
     public override double GetU(double T, double v)
     {
         // For an incompressible phase:
@@ -123,14 +134,33 @@ public abstract class CubicEquationOfState : EquationOfState
 
     public double GetUIdeal(double T, double v)
     {
-        // Just the ideal gas equation
-        double c_p = SpeciesPhase.HeatCapacityFunction.Getc_p(T);
-        return (c_p - Constants.R) * T;
+        // U_ideal(T) = H(T) - RT
+        // H(T) includes formation enthalpy and the integrated C_p(T), works for any temperature-dependent C_p
+        return SpeciesPhase.HeatCapacityFunction.GetH(T) - Constants.R * T;
     }
 
     public abstract double GetUDeparture(double T, double v);
 
+    private double DeriveUDepartureByT(double T, double v)
+    {
+        // Finite difference for departure C_v: d(U_dep)/dT
+        // vdW departure is T-independent so this returns 0, which is correct
+        const double dT = 0.01;
+        double U_plus = GetUDeparture(T + dT, v);
+        double U_minus = GetUDeparture(T - dT, v);
+        return (U_plus - U_minus) / (2.0 * dT);
+    }
+
     // The user-facing methods
+    public override double Getc_v(double T, double v)
+    {
+        // For a cubic EOS: C_v = C_v,ideal + C_v,departure
+        // C_v,ideal = C_p - R (Mayer's relation)
+        // C_v,departure = d(U_dep)/dT (finite difference overrides per-subclass)
+        double c_p = SpeciesPhase.HeatCapacityFunction.Getc_p(T);
+        return c_p - Constants.R + DeriveUDepartureByT(T, v);
+    }
+    
     public override double GetU(double T, double v)
     {
         return GetUIdeal(T, v) + GetUDeparture(T, v);

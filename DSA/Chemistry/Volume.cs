@@ -18,6 +18,7 @@ public class Volume : Inventory<SpeciesPhaseResource>
     // Mass: kg
     // UsedVolume: m^3, slighly different meaning in Volume: the volume taken up by condensed phases only
     // FreeVolume: m^3, has a getter: Volume - UsedVolume
+    public double C_v; // J / K, heat capacity at constant volume of the system
     public double U; // J, internal energy of the system
     public double S; // J / K, entropy of the system
     // H = U + PV, enthalpy of the system
@@ -33,9 +34,19 @@ public class Volume : Inventory<SpeciesPhaseResource>
     private Vector<double> vec_N = Vector<double>.Build.Dense(3); // [N_gas, N_liquid, N_solid] (enum Phase order)
     private Vector<double> vec_V = Vector<double>.Build.Dense(3); // [V_gas, V_liquid, V_solid]
 
+    // Constructor for an empty volume
+    public Volume(double volume)
+    {
+        Resources = new List<SpeciesPhaseResource>();
+        this.Volume = volume;
+        speciesToResources = new Dictionary<Species, List<SpeciesPhaseResource>>();
+        speciesPhaseToResource = new Dictionary<SpeciesPhase, SpeciesPhaseResource>();
+        freeElements = new Dictionary<Element, double>();
+    }
+
     protected override void DeriveQuantities()
     {
-        // Mass, vec_V, UsedVolume, U, S
+        // Mass, vec_V, UsedVolume, C_v, U, S
         Mass = 0.0;
         for (int m = 0; m < 3; m++)
         {
@@ -51,6 +62,7 @@ public class Volume : Inventory<SpeciesPhaseResource>
             Mass += resource.SpeciesPhase.Species.MolarMass * n;
             int phaseAsIndex = (int)resource.SpeciesPhase.Phase;
             vec_V[phaseAsIndex] += v * n;
+            C_v += resource.SpeciesPhase.EquationOfState.Getc_v(T, v) * n;
             U += resource.SpeciesPhase.EquationOfState.GetU(T, v) * n;
             S += resource.SpeciesPhase.HeatCapacityFunction.GetS(T) * n;
         }
@@ -311,98 +323,147 @@ public class Volume : Inventory<SpeciesPhaseResource>
         }
     }
 
-    private void SolveUT() // At constant U, guess T that conserves U, calls DeriveQuantities at each step
+    private void SolveUT() // At constant U, Newton iteration on T, calls DeriveQuantities at each step
     {
         for (int UTStep = 0; UTStep < Constants.MaxUTSteps; UTStep++)
         {
             DeriveQuantities();
-            double UError = (U - UTarget) / UTarget;
-            if (Math.Abs(UError) < Constants.UTolerance)
+            double UError = U - UTarget;
+            double relUError = UError / Math.Abs(UTarget);
+            if (Math.Abs(relUError) < Constants.UTolerance)
             {
-                break; // Consider the system solved
+                break;
             }
-            else
+            // Newton step: solve f(T) = U(T) - UTarget = 0
+            // f'(T) = dU/dT = C_v
+            // ΔT = -f(T) / f'(T) = -(U - UTarget) / C_v
+            double deltaT = -UError / C_v;
+            deltaT = Math.Clamp(deltaT, -Constants.MaxDeltaT, Constants.MaxDeltaT);
+            T += deltaT;
+            if (T < Constants.Tmin)
             {
-                // If U is too high (positive UError), we need to increase T
-                // Vice versa if U is too low (negative UError)
-                T *= 1.0 + UError;
-                // U depends non-linearly on T
-                // dU = TdS - PdV, and dV = 0 in a sealed box
-                // A better solution requires integration
-                // Clamp T
-                if (T < Constants.Tmin)
-                {
-                    T = Constants.Tmin;
-                }
+                T = Constants.Tmin;
             }
         }
     }
 
-    private void SolveVP() // At constant V, guess P that conserves V, calls DeriveQuantities at each step
+    private void SolveVP() // At constant V, Newton iteration on P, calls DeriveQuantities at each step
     {
         for (int VPStep = 0; VPStep < Constants.MaxVPSteps; VPStep++)
         {
             DeriveQuantities();
-            double VError = (vec_V.Sum() - Volume) / Volume;
-            if (Math.Abs(VError) < Constants.VTolerance)
+            double VError = (vec_V.Sum() - Volume);
+            double relVError = VError / Volume;
+            if (Math.Abs(relVError) < Constants.VTolerance)
             {
-                break; // Consider the system solved
+                break;
             }
-            else
+            // Newton step: V(P) ≈ V * P_old / P (ideal gas)
+            // dV/dP = -V/P, so ΔP = -VError * P (the proportional step)
+            // Clamp to prevent wild swings with cubic EOS
+            double deltaP = relVError * P;
+            deltaP = Math.Clamp(deltaP, -Constants.MaxDeltaP, Constants.MaxDeltaP);
+            P += deltaP;
+            if (P < Constants.Pmin)
             {
-                // If V is too high (positive VError), we need to increase P
-                // Vice versa if V is too low (negative VError)
-                P *= 1.0 + VError;
-                // V depends non-linearly on P (unless you have only ideal gases)
-                // A better solution requires integration
-                // Clamp P
-                if (P < Constants.Pmin)
-                {
-                    P = Constants.Pmin;
-                }
+                P = Constants.Pmin;
             }
         }
     }
 
     private void SolvePhases()
     {
-        // At equilibrium, fugacity of each species phase is the same for all phases of that species
+        // At equilibrium, the fugacity of a species is equal across all phases it occupies
+        // For a gas: f_j^gas = φ_j^gas * P_j where P_j = n_j * R * T / V_gas is the partial pressure under the immiscible-gas assumption
+        // For a pure condensed phase: f_j^cond = φ_j^cond * P (system pressure, no mixing)
+        // Setting f_gas = f_cond gives the equilibrium gas moles n_j^gas,eq
         foreach((Species species, List<SpeciesPhaseResource> resources) in speciesToResources)
         {
-            // If there is only a single phase, skip
             if (resources.Count == 1)
             {
                 continue;
             }
-            double[] logphis = resources.Select(resource => resource.SpeciesPhase.EquationOfState.GetLogphi(T, P, resource.SpeciesPhase.EquationOfState.Getv(T, P))).ToArray();
-            // Get the index of the phase with the lowest fugacity
-            int indexOfMin = logphis.IndexOf(logphis.Min());
-            // Move moles to the phase of lowest fugacity
-            // Use the relative fugacity difference as a multiplier
-            for (int indexOfSrc = 0; indexOfSrc < resources.Count; indexOfSrc++)
+            
+            SpeciesPhaseResource gasResource = resources.Find(r => r.SpeciesPhase.Phase == Phase.Gas);
+            if (gasResource == null)
             {
-                if (resources[indexOfSrc].SpeciesPhase.Phase == Phase.Solid
-                    && resources[indexOfMin].SpeciesPhase.Phase == Phase.Solid)
+                // No gas phase for this species; saturation vapor pressure cannot be determined
+                // move toward lowest-fugacity condensed phase
+                // TODO: ban the case of diamond -> graphite
+                // SolvePhases bypasses Species.DissociationTemperature
+                double[] logphis = resources.Select(r => r.SpeciesPhase.EquationOfState.GetLogphi(T, P, r.SpeciesPhase.EquationOfState.Getv(T, P))).ToArray();
+                double minLogphi = logphis.Min();
+                int indexOfMin = logphis.ToList().IndexOf(minLogphi);
+                for (int i = 0; i < resources.Count; i++)
                 {
-                    // solid -> solid is banned
-                    // SolvePhases bypasses DissociationTemperature and diamond -> graphite shouldn't happen
-                    continue;
+                    if (i != indexOfMin)
+                    {
+                        double n_total = resources[i].n + resources[indexOfMin].n;
+                        double n_target = resources[i].n * Constants.PhaseDamping; // Damped movement
+                        resources[i].n -= n_target;
+                        resources[indexOfMin].n += n_target;
+                    }
                 }
-                if (indexOfSrc != indexOfMin)
+            }
+            else
+            {
+                double n_gas = gasResource.n;
+                double V_gas = vec_V[0];
+                if (V_gas <= 0.0)
                 {
-                    double ratio = (logphis[indexOfSrc] - logphis[indexOfMin]) / logphis[indexOfMin];
-                    double n_moved = ratio * resources[indexOfSrc].n;
-                    resources[indexOfSrc].n -= n_moved;
-                    resources[indexOfMin].n += n_moved;
+                    V_gas = 1e-6; // Avoid division by zero
+                }
+
+                foreach (SpeciesPhaseResource condResource in resources)
+                {
+                    if (condResource == gasResource) continue;
+
+                    double n_cond = condResource.n;
+                    double n_total = n_gas + n_cond;
+                    if (n_total < Constants.n_jMin) continue;
+
+                    // Condensed phase: pure, so x_j = 1. f_cond = φ_cond * P
+                    double phi_cond = Math.Exp(condResource.SpeciesPhase.EquationOfState.GetLogphi(T, P, condResource.SpeciesPhase.EquationOfState.Getv(T, P)));
+
+                    // Gas phase: partial pressure P_j = n_gas * R * T / V_gas, f_gas = φ_gas * P_j
+                    // For ideal gas, φ=1. For cubic EOS, use partial pressure to compute φ.
+                    double v_gas = V_gas / Math.Max(n_gas, Constants.n_jMin);
+                    double P_gas = gasResource.SpeciesPhase.EquationOfState.GetP(T, v_gas);
+                    double phi_gas = Math.Exp(gasResource.SpeciesPhase.EquationOfState.GetLogphi(T, P_gas, v_gas));
+
+                    // f_gas = φ_gas * P_gas
+                    // f_cond = φ_cond * P
+                    // Equilibrium: φ_gas * (n_gas_eq * R * T / V_gas) = φ_cond * P
+                    // For ideal gas (φ_gas = 1, P_gas = n*RT/V_gas): n_gas_eq = φ_cond * P * V_gas / (R * T)
+                    double fug_gas = phi_gas * P_gas;
+                    double fug_cond = phi_cond * P;
+
+                    // Solve φ_gas * (n_gas_eq * R * T / V_gas) = φ_cond * P
+                    // n_gas_eq = (φ_cond / φ_gas) * P * V_gas / (R * T)
+                    double n_gas_eq = (phi_cond / phi_gas) * P * V_gas / (Constants.R * T);
+                    n_gas_eq = Math.Clamp(n_gas_eq, 0.0, n_total);
+
+                    // Damped movement toward equilibrium
+                    double n_gas_target = n_gas + Constants.PhaseDamping * (n_gas_eq - n_gas);
+                    n_gas_target = Math.Clamp(n_gas_target, 0.0, n_total);
+
+                    gasResource.n = n_gas_target;
+                    condResource.n = n_total - n_gas_target;
+
+                    // One condensed phase per species per SolvePhases call
+                    // If both solid and liquid are trying to equilibrate with gas, the first loop will use the entire calculated n_gas_target
+                    break;
                 }
             }
         }
     }
 
-    private void Solve()
+    public void Solve()
     {
         Dissociate();
         RebuildIndexes();
+        DeriveQuantities();
+        UTarget = U; // Conserve energy after dissociation, before reaction changes composition
         SolveReactions();
         SolveUT();
         SolveVP();
@@ -410,7 +471,15 @@ public class Volume : Inventory<SpeciesPhaseResource>
         SolvePhases();
     }
 
-    // TODO: MaybeAdd and MaybeMerge
     // Volume is a thermodynamic simulation, so putting things in the box requires work
     // A full theory of pumps is needed before those methods can be implemented
+    public override bool CanAdd(SpeciesPhaseResource resource)
+    {
+        return false; // Stub: pumps not implemented yet
+    }
+
+    public override bool MaybeAdd(SpeciesPhaseResource resource)
+    {
+        return false; // Stub: pumps not implemented yet
+    }
 }

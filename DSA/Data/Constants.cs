@@ -91,8 +91,13 @@ public class Constants
     // mantissa = ceil(65.029 699 823 850 7) - 1
     // So 65 bits are needed
 
+    // Note that we now keep track of (possibly negative) freeElements, so conservation of mass is no longer a quantity we track
+    // Positive and negative amount errors are self-limiting, so in the end only floating point error accumulates
+
+    // Dissociate
     public const double DissociationThreshold = 1e-3; // fraction per frame, 0.1%
 
+    // SolveReactions
     public const uint MaxReactionSteps = 20;
     public const double N_mMin = 1e-6; // mol, N_m for phase m is clamped to be > this after every Newton step
     public const double H_iTolerance = 1e-6; // mol element i unused, an early exit condition for SolveReactions
@@ -101,13 +106,20 @@ public class Constants
     // Instead, the elements it would have consumed are returned to freeElements
     // For comparison, Stationeers uses 0.001 mmol as the deletion threshold, below which a species (and any mass it embodies) vanishes
 
+    // SolveUT
     public const uint MaxUTSteps = 20;
     public const double UTolerance = 1e-6; // (J actual - J target) / J target, an early exit condition for SolveUT
     public const double Tmin = 1e-6; // K, avoid going below absolute zero
+    public const double MaxDeltaT = 50.0; // K, maximum Newton step in SolveUT (damping)
 
+    // SolveVP
     public const uint MaxVPSteps = 20;
     public const double VTolerance = 1e-6; // (m^3 actual - m^3 target) / m^3 target, an early exit condition for SolveVP
-    public const double Pmin = 1e-6; // Pa, avoid going below a vacuum
+    public const double Pmin = 1e-6; // Pa, avoid going below a vacuum    
+    public const double MaxDeltaP = 1e5; // Pa, maximum Newton step in SolveVP (damping)
+    
+    // SolvePhases
+    public const double PhaseDamping = 0.5; // fraction, how aggressively to move toward fugacity equilibrium in SolvePhases
 
     // Unscientific
     

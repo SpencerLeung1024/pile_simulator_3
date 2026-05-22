@@ -244,6 +244,7 @@ public static class FormulaTable
     // - the view itself, as a matrix
     // See GetViewBitmask and GetView below
     public static Dictionary<ulong, (Element[], SpeciesPhase[], Matrix<double>)> viewCache = new Dictionary<ulong, (Element[], SpeciesPhase[], Matrix<double>)>();
+    private static readonly object viewCacheLock = new object(); // Prevent multiple threads from trying to make a new entry and put it in viewCache
 
     // Pulls data from Elements, AllSpecies and AllSpeciesPhases. Make sure those are fully filled in before calling this
     public static void Initialize()
@@ -308,60 +309,62 @@ public static class FormulaTable
             else
             {
                 // Create the view and cache it
-
-                List<Element> viewElementsList = new List<Element>();
-                List<SpeciesPhase> viewSpeciesList = new List<SpeciesPhase>();
-                // Fill these in as we discover i and j below
-
-                // "Only for contiguous ranges. Math.NET's SubMatrix(rowStart, rowCount, colStart, colCount) creates a view over contiguous rows/columns. For the arbitrary non-contiguous selection you need (bitmask-based), there's no built-in view." - DeepSeek V4 Pro
-
-                // Math.NET DenseMatrix uses column-major storage (Fortran order).
-                // If I really wanted to be fast I would transpose the table before getting element rows, but it probably doesn't matter in the end
-                // table and view should remain [i, j] though. The heavy work in Volume.SolveReactions hits different i of the same j more often than different j of the same i, so column-major is better overall
-
-                // Our algorithm will be:
-                // 1. Keep only rows (elements) that are in the bitmask
-                // 2. Keep only columns (species) that have non-zero counts
-
-                // 1.
-                List< Vector<double> > viewRowsList = new List< Vector<double> >(); // viewRowsList[i] = row i of the view, as a vector
-                for (int table_i = 0; table_i < 64; table_i++)
+                lock (viewCacheLock)
                 {
-                    // Get this element's bit from the bitmask
-                    if ((bitmask & (1UL << table_i)) != 0)
+                    List<Element> viewElementsList = new List<Element>();
+                    List<SpeciesPhase> viewSpeciesList = new List<SpeciesPhase>();
+                    // Fill these in as we discover i and j below
+
+                    // "Only for contiguous ranges. Math.NET's SubMatrix(rowStart, rowCount, colStart, colCount) creates a view over contiguous rows/columns. For the arbitrary non-contiguous selection you need (bitmask-based), there's no built-in view." - DeepSeek V4 Pro
+
+                    // Math.NET DenseMatrix uses column-major storage (Fortran order).
+                    // If I really wanted to be fast I would transpose the table before getting element rows, but it probably doesn't matter in the end
+                    // table and view should remain [i, j] though. The heavy work in Volume.SolveReactions hits different i of the same j more often than different j of the same i, so column-major is better overall
+
+                    // Our algorithm will be:
+                    // 1. Keep only rows (elements) that are in the bitmask
+                    // 2. Keep only columns (species) that have non-zero counts
+
+                    // 1.
+                    List< Vector<double> > viewRowsList = new List< Vector<double> >(); // viewRowsList[i] = row i of the view, as a vector
+                    for (int table_i = 0; table_i < 64; table_i++)
                     {
-                        viewElementsList.Add(Elements.list[table_i]);
-                        viewRowsList.Add(table.Row(table_i));
+                        // Get this element's bit from the bitmask
+                        if ((bitmask & (1UL << table_i)) != 0)
+                        {
+                            viewElementsList.Add(Elements.list[table_i]);
+                            viewRowsList.Add(table.Row(table_i));
+                        }
                     }
-                }
 
-                Matrix<double> tempMatrix = Matrix<double>.Build.DenseOfRowVectors(viewRowsList);
+                    Matrix<double> tempMatrix = Matrix<double>.Build.DenseOfRowVectors(viewRowsList);
 
-                // 2.
-                List< Vector<double> > viewColsList = new List< Vector<double> >(); // viewColsList[j] = column j of the view, as a vector
-                for (int table_j = 0; table_j < AllSpeciesPhases.list.Count; table_j++)
-                {
-                    Vector<double> col = tempMatrix.Column(table_j);
-                    // "Sum() is a native Math.NET method, SIMD-accelerated, and avoids LINQ delegate overhead."
-                    // IEnumerable.Any has early exit but the overhead probably makes it worse in this case
-                    if (col.Sum() > 0.0) // double Vector<double>.Sum()
-                    //if (col.Max() > 0.0) // (extension) double IEnumerable<double>.Max()
-                    //if (col.Any(value => value > 0.0)) // (extension) bool IEnumerable<double>.Any<double>(Func<double, bool> predicate)
+                    // 2.
+                    List< Vector<double> > viewColsList = new List< Vector<double> >(); // viewColsList[j] = column j of the view, as a vector
+                    for (int table_j = 0; table_j < AllSpeciesPhases.list.Count; table_j++)
                     {
-                        viewSpeciesList.Add(AllSpeciesPhases.list[table_j]);
-                        viewColsList.Add(col);
+                        Vector<double> col = tempMatrix.Column(table_j);
+                        // "Sum() is a native Math.NET method, SIMD-accelerated, and avoids LINQ delegate overhead."
+                        // IEnumerable.Any has early exit but the overhead probably makes it worse in this case
+                        if (col.Sum() > 0.0) // double Vector<double>.Sum()
+                        //if (col.Max() > 0.0) // (extension) double IEnumerable<double>.Max()
+                        //if (col.Any(value => value > 0.0)) // (extension) bool IEnumerable<double>.Any<double>(Func<double, bool> predicate)
+                        {
+                            viewSpeciesList.Add(AllSpeciesPhases.list[table_j]);
+                            viewColsList.Add(col);
+                        }
                     }
-                }
 
-                // Build the view
-                view = Matrix<double>.Build.DenseOfColumnVectors(viewColsList);
+                    // Build the view
+                    view = Matrix<double>.Build.DenseOfColumnVectors(viewColsList);
 
-                // Fix the lists as arrays
-                viewElements = viewElementsList.ToArray();
-                viewSpecies = viewSpeciesList.ToArray();
+                    // Fix the lists as arrays
+                    viewElements = viewElementsList.ToArray();
+                    viewSpecies = viewSpeciesList.ToArray();
 
-                // Cache the view
-                viewCache[bitmask] = (viewElements, viewSpecies, view);
+                    // Cache the view
+                    viewCache[bitmask] = (viewElements, viewSpecies, view);
+                } // End lock
             }
         }
     }

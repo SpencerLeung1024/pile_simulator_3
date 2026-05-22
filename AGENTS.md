@@ -58,6 +58,8 @@ Only World exists right now
 - Answered by GPT-5.5 and Opus 4.7:
 - - The dual problem is a system of (num elements + num phases) non-linear equations. It combines element usage constraints and mole fraction normalization constraints. How to set it up is in `docs/chemistry/dual_problem`
 
+- Solver architecture review by GPT-5.5, Opus 4.7, DeepSeek V4 Pro, and Kimi K2.6 is in `docs/chemistry/solver`
+
 - MainMenu.cs should do:
 
 ```csharp
