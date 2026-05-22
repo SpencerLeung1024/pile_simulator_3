@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Godot;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 // A volume represents something that contains matter
 // The matter may be made up of numerous species, existing as gas, liquid, and solid phases
@@ -11,61 +12,70 @@ public class Volume : Inventory<SpeciesPhaseResource>
     // Volume: m^3
     public double T; // K
     public double P; // Pa
+    public double UTarget; // J, conserved when guessing T
     
     // Derived quantities:
     // Mass: kg
     // UsedVolume: m^3, slighly different meaning in Volume: the volume taken up by condensed phases only
     // FreeVolume: m^3, has a getter: Volume - UsedVolume
-    private double U; // J, internal energy of the system
+    public double U; // J, internal energy of the system
+    public double S; // J / K, entropy of the system
     // H = U + PV, enthalpy of the system
     // G = H - TS, Gibbs free energy of the system
+    // Publicing U and S allows the BoxSim UI to calculate and show thermodynamic variables
+
+    // Internal solver variables:
+    private Dictionary<SpeciesPhase, SpeciesPhaseResource> speciesPhaseToResource;
+    private Dictionary<Species, List<SpeciesPhaseResource>> speciesToResources;
+    private Dictionary<Element, double> freeElements; // Can be negative
     private ulong bitmask;
     private double[] vec_lambda;
-    private double[] vec_n = new double[3]; // [n_gas, n_liquid, n_solid] (enum Phase order)
+    private double[] vec_N = new double[3]; // [N_gas, N_liquid, N_solid] (enum Phase order)
+    private double[] vec_V = new double[3]; // [V_gas, V_liquid, V_solid]
 
     protected override void DeriveQuantities()
     {
+        // Mass, vec_V, UsedVolume, U, S
         Mass = 0.0;
-        UsedVolume = 0.0;
+        for (int m = 0; m < 3; m++)
+        {
+            vec_V[m] = 0.0;
+        }
         U = 0.0;
+        S = 0.0;
         foreach (SpeciesPhaseResource resource in Resources)
         {
             double n = resource.n;
             double v = resource.SpeciesPhase.EquationOfState.Getv(T, P);
             Mass += resource.SpeciesPhase.Species.MolarMass * n;
-            if (resource.SpeciesPhase.Phase != Phase.Gas)
-            {
-                UsedVolume += v * n;
-            }
+            int phaseAsIndex = (int)resource.SpeciesPhase.Phase;
+            vec_V[phaseAsIndex] += v * n;
             U += resource.SpeciesPhase.EquationOfState.GetU(T, v) * n;
+            S += resource.SpeciesPhase.HeatCapacityFunction.GetS(T) * n;
         }
+        UsedVolume = vec_V[(int)Phase.Liquid] + vec_V[(int)Phase.Solid];
     }
 
-    private double GetGasVolume()
+    private void Dissociate()
     {
-        double gasVolume = 0.0;
-        foreach (SpeciesPhaseResource resource in Resources)
+        // We may need to remove resources if they were fully dissociated, so we need a backward for loop
+        for (int j = Resources.Count - 1; j >= 0; j--)
         {
-            if (resource.SpeciesPhase.Phase == Phase.Gas)
-            {
-                double v = resource.SpeciesPhase.EquationOfState.Getv(T, P);
-                gasVolume += v * resource.n;
-            }
-        }
-        return gasVolume;
-    }
-
-    private Dictionary<Element, double> Dissociate()
-    {
-        Dictionary<Element, double> freeElements = new Dictionary<Element, double>();
-        foreach (SpeciesPhaseResource resource in Resources)
-        {
+            SpeciesPhaseResource resource = Resources[j];
             Species species = resource.SpeciesPhase.Species;
             if (T > species.DissociationTemperature)
             {
                 double k = Math.Exp(-species.DissociationActivationEnergy / (Constants.R * T)); // Arrhenius equation k = Ae^(-E_a / RT) with A = 1 / frame
                 double n_dissociated = resource.n * k;
-                resource.n -= n_dissociated;
+                if (resource.n - n_dissociated < Constants.n_jMin)
+                {
+                    n_dissociated = resource.n; // Fully dissociate if it would go below the minimum threshold
+                    Resources.RemoveAt(j); // We keep a reference to species so it's ok
+                }
+                else
+                {
+                    resource.n -= n_dissociated;
+                }
                 foreach ((Element element, uint count) in species.Formula)
                 {
                     if (!freeElements.ContainsKey(element))
@@ -76,14 +86,63 @@ public class Volume : Inventory<SpeciesPhaseResource>
                 }
             }
         }
-        return freeElements;
+    }
+
+    private void RebuildIndexes() // Not BuildIndexes like the static classes because Volume.Resources changes every frame
+    {
+        // speciesToResources, speciesPhaseToResource, bitmask
+        speciesToResources.Clear();
+        speciesPhaseToResource.Clear();
+        HashSet<Element> existingElements = new HashSet<Element>();
+        foreach (SpeciesPhaseResource resource in Resources)
+        {
+            SpeciesPhase speciesPhase = resource.SpeciesPhase;
+            Species species = speciesPhase.Species;
+            if (!speciesToResources.ContainsKey(species))
+            {
+                speciesToResources[species] = new List<SpeciesPhaseResource>()
+                {
+                    resource
+                };
+            }
+            speciesPhaseToResource[speciesPhase] = resource;
+            existingElements.UnionWith(species.Formula.Keys);
+        }
+        ulong newBitmask = FormulaTable.GetViewBitmask(existingElements.ToList());
+        // Invalidate vec_lambda if bitmask changed
+        if (newBitmask != bitmask)
+        {
+            bitmask = newBitmask;
+            vec_lambda = new double[existingElements.Count];
+            for (int i = 0; i < vec_lambda.Length; i++)
+            {
+                vec_lambda[i] = 0.0; // Restart with all elements having zero element potential
+            }
+        }
+    }
+
+    private void SolveReactions()
+    {
+        // This (Element Potential Method) determines what the free elements should recombine into
+        // The problem that NASA Chemical Equilibrium with Applications solves is:
+        // Given element amounts and the ability to make any positive amount of species, minimize the Gibbs free energy of the system
+        // But Pile Simulator 3 only dissociates a fraction of moles each frame, so the problem we're trying to solve is:
+        // Given free element amounts and existing species amounts, choose new species amounts that minimize the Gibbs free energy of the system
+        // The n_j produced by SolveReactions should be understood as += existing species amounts
+
+        Element[] viewElements; // i = an element, a = num elements, elements are in order of increasing Z
+        SpeciesPhase[] viewSpecies; // j = a species, s = num species, unordered, but consistent with the order of their addition to AllSpeciesPhases
+        uint[,] view; // view[i, j] = n_ij = count of element i in species j
+        FormulaTable.GetView(bitmask, out viewElements, out viewSpecies, out view);
+        int a = viewElements.Length;
+        int s = viewSpecies.Length;
     }
 
     private void SolveReactions(Dictionary<Element, double> freeElements)
     {
         Element[] viewElements; // i = an element, a = num elements, elements are in order of increasing Z
         SpeciesPhase[] viewSpecies; // j = a species, s = num species, unordered, but consistent with the order of their addition to AllSpeciesPhases
-        uint[,] view; // view[i, j] = n_ij = count of element i in species j
+        Matrix<double> view; // view[i, j] = n_ij = count of element i in species j
         FormulaTable.GetView(bitmask, out viewElements, out viewSpecies, out view);
         int a = viewElements.Length;
         int s = viewSpecies.Length;

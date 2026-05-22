@@ -20,6 +20,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-`DSA/Data/thermo.inp` comes from https://github.com/nasa/cea/blob/main/data/thermo.inp, which comes from NASA Glenn Coefficients for Calculating Thermodynamic Properties of Individual Species (https://ntrs.nasa.gov/citations/20020085330) a work of the US Government in the public domain.
+`DSA/Data/thermo.inp` comes from https://github.com/nasa/cea/blob/main/data/thermo.inp, which comes from NASA Glenn Coefficients for Calculating Thermodynamic Properties of Individual Species (https://ntrs.nasa.gov/citations/20020085330), a work of the US Government in the public domain.
 
 `DSA/Data/mass_1.mas20.txt` and `DSA/Data/nubase_4.mas20.txt` come from Atomic Mass Evaluation - AME2020 and Nubase Evaluation - Nubase2020 respectively, at https://www-nds.iaea.org/amdc/. The three associated papers are copyright of the Chinese Physical Society, the Institute of High Energy Physics of the Chinese Academy of Sciences, the Institute of Modern Physics of the Chinese Academy of Sciences, and IOP Publishing Ltd. The data is used under the terms of the Creative Commons Attribution 3.0 licence.
+
+MathNet.Numerics comes from https://numerics.mathdotnet.com/ and is used under the terms of the MIT license.

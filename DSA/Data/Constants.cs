@@ -91,9 +91,15 @@ public class Constants
     // mantissa = ceil(65.029 699 823 850 7) - 1
     // So 65 bits are needed
 
-    public const uint MaxSteps = 20;
-
     public const double DissociationThreshold = 1e-3; // fraction per frame, 0.1%
+    public const uint MaxReactionSteps = 20;
+    public const uint MaxUTSteps = 20;
+    public const uint MaxVPSteps = 20;
+    
+    public const double N_mMin = 1e-6; // mol, N_m for phase m is clamped to be > this after every Newton step
+    public const double n_jMin = 1e-6; // mol, a species will not be realized if its calculated amount is < this
+    // Instead, the elements it would have consumed are returned to freeElements
+    // For comparison, Stationeers uses 0.001 mmol as the deletion threshold, below which a species (and any mass it embodies) vanishes
 
     // Unscientific
     

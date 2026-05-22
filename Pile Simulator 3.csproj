@@ -9,4 +9,10 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>PileSimulator3</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Used for the Newton solving step in Volume.SolveReactions() -->
+    <!-- Last Updated 2025-03-02 -->
+    <!-- 5.0.0 was last updated 2022-04-03 but let's try the beta -->
+    <PackageReference Include="MathNet.Numerics" Version="6.0.0-beta2" />
+  </ItemGroup>
 </Project>

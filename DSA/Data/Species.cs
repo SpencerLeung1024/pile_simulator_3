@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 public class Species
 {
@@ -232,37 +234,35 @@ public static class FormulaTable
 {
     // table[element, species] = n_ij as seen in the STANJAN PDF, where i = element and j = species
     //public static uint[,] table = new uint[,]();
-    public static uint[,] table; // We don't know how many species and elements there will be
+    //public static uint[,] table; // We don't know how many species and elements there will be
+    public static Matrix<double> table; // Use Math.NET Numerics so we can do matrix vector operations
 
     // Create a view of the table containing only certain elements and species using those elements
     // ulong is a bitmask of elements
     // The tuple contains:
     // - the elements, as used in the view's rows
     // - the species, as used in the view's columns
-    // - the view itself, as a 2D array of uints
+    // - the view itself, as a matrix
     // See GetViewBitmask and GetView below
-    public static Dictionary<ulong, (Element[], SpeciesPhase[], uint[,])> viewCache = new Dictionary<ulong, (Element[], SpeciesPhase[], uint[,])>();
+    public static Dictionary<ulong, (Element[], SpeciesPhase[], Matrix<double>)> viewCache = new Dictionary<ulong, (Element[], SpeciesPhase[], Matrix<double>)>();
 
     // Pulls data from Elements, AllSpecies and AllSpeciesPhases. Make sure those are fully filled in before calling this
     public static void Initialize()
     {
         int a = Elements.list.Length; // The PDF uses a = num elements
         int s = AllSpeciesPhases.list.Count; // The PDF uses s = num species
-        table = new uint[a, s];
+        table = Matrix<double>.Build.Dense(a, s); // All cells of the matrix will be initialized to zero
+        // n_ij only has values of uint, but operations with mole fractions require <double> and <double>
         for (int j = 0; j < s; j++)
         {
             SpeciesPhase speciesPhase = AllSpeciesPhases.list[j];
             Species species = speciesPhase.Species;
             for (int i = 0; i < a; i++)
             {
-                Element element = Elements.list[i];
-                if (species.Formula.ContainsKey(element))
+                foreach ((Element element, uint count) in species.Formula)
                 {
-                    table[i, j] = species.Formula[element];
-                }
-                else
-                {
-                    table[i, j] = 0;
+                    int i = (int)element.Z - 1; // hydrogen.Z = 1 but i should be 0
+                    table[i, j] = (double)count;
                 }
             }
         }
@@ -277,18 +277,46 @@ public static class FormulaTable
         ulong bitmask = 0;
         foreach (Element element in elements)
         {
-            int index = (int)element.Z - 1; // Z starts at 1 for hydrogen, but bitmask starts at 0, so subtract 1
-            if (index >= 64)
+            int i = (int)element.Z - 1;
+            if (i >= 64)
             {
                 // Can't represent this element in the bitmask, so return 0 to indicate that the full table should be used
                 return 0;
             }
             else
             {
-                bitmask |= (1UL << index);
+                bitmask |= (1UL << i);
             }
         }
         return bitmask;
+    }
+
+    public static void GetView(ulong bitmask, out Element[] viewElements, out SpeciesPhase[] viewSpecies, out Matrix<double> view)
+    {
+        if (bitmask == 0)
+        {
+            // Can't represent this view in the bitmask, so return the full table
+            viewElements = Elements.list;
+            viewSpecies = AllSpeciesPhases.list.ToArray();
+            view = table;
+        }
+        else
+        {
+            viewCache.TryGetValue(bitmask, out (Element[], SpeciesPhase[], Matrix<double>) cachedView);
+            if (cachedView != default)
+            {
+                viewElements = cachedView.Item1;
+                viewSpecies = cachedView.Item2;
+                view = cachedView.Item3;
+            }
+            else
+            {
+                // Create the view and cache it
+
+                // **OpenCode entry point**
+                // Does Math.NET have any operators to help with getting a view of a matrix?
+            }
+        }
     }
 
     // Transforms the formula from a dictionary to a uint array in the order expected by a view
@@ -315,7 +343,7 @@ public static class FormulaTable
         return elementCounts;
     }
 
-    public static void GetView(ulong bitmask, out Element[] viewElements, out SpeciesPhase[] viewSpecies, out uint[,] view)
+    public static void GetView(ulong bitmask, out Element[] viewElements, out SpeciesPhase[] viewSpecies, out Matrix<double> view)
     {
         if (bitmask == 0)
         {
