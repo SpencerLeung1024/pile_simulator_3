@@ -87,6 +87,13 @@ public class SpeciesPhase
     // Chemical potential, μ, is what is minimized in a system
     // It has units of J / mol
     // How much energy do you get from increasing the system's amount of this species by 1 mol?
+
+    // After review, it turns out that "-μ_j / RT" in the Element Potential Method actually refers to the *pure species* chemical potential
+    // x_j = 1 and there is no mixing
+    // I have chosen to retain a single Getmu with x_j, but Volume.SolveReactions passes x_j = 1
+    // This takes the path with no mixing term
+
+    // …ようこそ。アヴェ μ_jィカの世界へ
     public double Getmu(double T, double P, double x_j)
     {
         // Pile Simulator 3 mostly follows the formulas for an ideal gas and ideal solution
@@ -102,7 +109,11 @@ public class SpeciesPhase
 
         // G = H - TS
         double gibbs_term = HeatCapacityFunction.GetH(T) - T * HeatCapacityFunction.GetS(T);
-        double mixing_term = Constants.R * T * Math.Log(x_j);
+        double mixing_term = 0.0;
+        if (x_j < 1.0)
+        {
+            mixing_term = Constants.R * T * Math.Log(x_j);
+        }
         double pressure_term = 0.0;
         if (Phase == Phase.Gas)
         {
