@@ -81,7 +81,7 @@ grow_vertical = 0
 text = "FPS: 42
 U: -12.3 MJ
 T: 456 K
-V: 1.00 m^3
+V: 1.00 kL
 P: 357 kPa
 S: 357 kJ / K
 H = U - PV: -12.3 MJ

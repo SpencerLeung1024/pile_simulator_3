@@ -42,9 +42,6 @@ public partial class BoxSim : Node3D
 		}
 		_speciesPhaseDropdown.Selected = 0;
 
-		_volume.T = 300.0;
-		_volume.P = Constants.bar;
-
 		_addSpeciesPhaseButton.Pressed += OnAddSpeciesPhase;
 		_playButton.Pressed += OnPlay;
 		_pauseButton.Pressed += OnPause;
@@ -66,40 +63,40 @@ public partial class BoxSim : Node3D
 
 	private void UpdateUI()
 	{
-		VolumeDisplayInfo info = _volume.GetInfo();
+		List<ResourceDisplayEntry> info = _volume.GetInfo();
 		UpdateThermodynamicsLabel(info);
 		UpdateResourcesLabel(info);
 		UpdateMultiMesh(info);
 	}
 
-	private void UpdateThermodynamicsLabel(VolumeDisplayInfo info)
+	private void UpdateThermodynamicsLabel(List<ResourceDisplayEntry> info)
 	{
-		int fps = Engine.GetFramesPerSecond();
-		double H = info.U + info.P * info.V;
-		double G = H - info.T * info.S;
-		double A = info.U - info.T * info.S;
+		int fps = (int)Engine.GetFramesPerSecond();
+		double H = _volume.U + _volume.P * _volume.Volume;
+		double G = H - _volume.T * _volume.S;
+		double A = _volume.U - _volume.T * _volume.S;
 
 		_thermodynamicsLabel.Text =
 			$"FPS: {fps}\n" +
-			$"U: {FormatEnergy(info.U)}\n" +
-			$"T: {info.T:F0} K\n" +
-			$"V: {info.V:F2} m^3\n" +
-			$"P: {FormatPressure(info.P)}\n" +
-			$"S: {FormatEntropy(info.S)}\n" +
-			$"H = U + PV: {FormatEnergy(H)}\n" +
-			$"G = H - TS: {FormatEnergy(G)}\n" +
-			$"A = U - TS: {FormatEnergy(A)}";
+			$"U: {Constants.FormatUnit(_volume.U, 3, "J")}\n" +
+			$"T: {Math.Round(_volume.T)} K\n" + // Always show as Kelvin with no SI prefix
+			$"V: {Constants.FormatUnit(_volume.Volume * 1e3, 3, "L")}\n" + // The SI unit is m^3 but "mm^3" is actually 1e-9 m^3, so show L as the unit
+			$"P: {Constants.FormatUnit(_volume.P, 3, "Pa")}\n" +
+			$"S: {Constants.FormatUnit(_volume.S, 3, "J/K")}\n" +
+			$"H = U + PV: {Constants.FormatUnit(H, 3, "J")}\n" +
+			$"G = H - TS: {Constants.FormatUnit(G, 3, "J")}\n" +
+			$"A = U - TS: {Constants.FormatUnit(A, 3, "J")}";
 	}
 
-	private void UpdateResourcesLabel(VolumeDisplayInfo info)
+	private void UpdateResourcesLabel(List<ResourceDisplayEntry> info)
 	{
-		if (info.Resources.Count == 0)
+		if (info.Count == 0)
 		{
 			_resourcesLabel.Text = "";
 			return;
 		}
 
-		var speciesGroups = info.Resources
+		var speciesGroups = info
 			.GroupBy(r => r.SpeciesPhase.Species)
 			.OrderBy(g => g.Key.Name);
 
@@ -112,19 +109,15 @@ public partial class BoxSim : Node3D
 			foreach (var entry in group.OrderBy(e => (int)e.SpeciesPhase.Phase))
 			{
 				sb.AppendLine(
-					$"{entry.SpeciesPhase.Phase.ToString().ToLower()}: {FormatMoles(entry.n)}, {FormatMass(entry.Mass)}, {FormatVolume(entry.PhaseVolume)}");
+					$"{entry.SpeciesPhase.Phase.ToString().ToLower()}: {Constants.FormatUnit(entry.n, 3, "mol")}, {Constants.FormatUnit(entry.Mass, 3, "kg")}, {Constants.FormatUnit(entry.ResourceVolume * 1e3, 3, "L")}");
 			}
 		}
 		_resourcesLabel.Text = sb.ToString().TrimEnd();
 	}
 
-	private void UpdateMultiMesh(VolumeDisplayInfo info)
+	private void UpdateMultiMesh(List<ResourceDisplayEntry> info)
 	{
-		var visibleResources = info.Resources
-			.Where(r => r.n > Constants.n_jMin)
-			.ToList();
-
-		int count = visibleResources.Count;
+		int count = info.Count;
 		_multiMeshSpeciesPhase.Multimesh.InstanceCount = count;
 
 		if (count == 0)
@@ -140,9 +133,9 @@ public partial class BoxSim : Node3D
 		var displayVolumes = new List<(ResourceDisplayEntry entry, float vol)>();
 		double totalVol = 0.0;
 
-		foreach (var entry in visibleResources)
+		foreach (var entry in info)
 		{
-			float v = (float)Math.Max(entry.PhaseVolume / entry.n, minMolarVolume);
+			float v = (float)Math.Max(entry.ResourceVolume / entry.n, minMolarVolume);
 			float vol = v * (float)entry.n;
 			int p = (int)entry.SpeciesPhase.Phase;
 			phaseVolumes[p] += vol;
@@ -194,7 +187,7 @@ public partial class BoxSim : Node3D
 				float xCenter = xLeft + width / 2.0f;
 
 				var transform = new Transform3D(
-					new Basis(new Vector3(width, phaseHeight, boxSize)),
+					new Basis().Scaled(new Vector3(width, phaseHeight, boxSize)),
 					new Vector3(xCenter, yCenter, 0)
 				);
 
@@ -228,38 +221,31 @@ public partial class BoxSim : Node3D
 		}
 		SpeciesPhase selectedPhase = AllSpeciesPhases.list[index];
 
-		if (!double.TryParse(_amountLineEdit.Text, out double amount) || amount <= 0)
+		if (!double.TryParse(_amountLineEdit.Text, out double addedn) || addedn <= 0)
 		{
 			return;
 		}
 
-		if (double.TryParse(_temperatureLineEdit.Text, out double temperature) && temperature > 0)
+		if (!double.TryParse(_temperatureLineEdit.Text, out double addedT) || addedT <= 0)
 		{
-			_volume.T = temperature;
+			return;
 		}
 
-		SpeciesPhaseResource existing = null;
-		foreach (var r in _volume.Resources)
+		SpeciesPhaseResource resource = new SpeciesPhaseResource
 		{
-			if (r.SpeciesPhase == selectedPhase)
-			{
-				existing = r;
-				break;
-			}
-		}
+			SpeciesPhase = selectedPhase,
+			n = addedn
+		};
 
-		if (existing != null)
+		bool success = _volume.MaybeAdd(resource);
+		if (!success)
 		{
-			existing.n += amount;
+			throw new Exception("Failed to add resource to volume");
 		}
-		else
-		{
-			_volume.Resources.Add(new SpeciesPhaseResource
-			{
-				SpeciesPhase = selectedPhase,
-				n = amount
-			});
-		}
+		// We also need to increase the target internal energy
+		// Otherwise we would be putting in matter at absolute zero and the box would gradually get colder
+		double addedU = resource.n * resource.SpeciesPhase.EquationOfState.GetU(addedT, resource.SpeciesPhase.EquationOfState.Getv(addedT, _volume.P));
+		_volume.UTarget += addedU;
 
 		UpdateUI();
 	}
@@ -286,70 +272,12 @@ public partial class BoxSim : Node3D
 
 	private void OnClear()
 	{
-		_volume.Resources.Clear();
-		_volume.T = 300.0;
-		_volume.P = Constants.bar;
+		_volume.Clear();
 		UpdateUI();
 	}
 
 	private void OnSparkToggled(bool toggledOn)
 	{
 		_volume.spark = toggledOn;
-	}
-
-	private static string FormatEnergy(double joules)
-	{
-		double mj = joules / 1e6;
-		if (Math.Abs(mj) >= 100.0)
-		{
-			return $"{mj:F0} MJ";
-		}
-		return $"{mj:F1} MJ";
-	}
-
-	private static string FormatPressure(double pascals)
-	{
-		return $"{(pascals / 1000.0):F0} kPa";
-	}
-
-	private static string FormatEntropy(double joulesPerKelvin)
-	{
-		return $"{(joulesPerKelvin / 1000.0):F0} kJ / K";
-	}
-
-	private static string FormatMoles(double mol)
-	{
-		if (mol >= 1000.0)
-		{
-			return $"{mol / 1000.0:F2} kmol";
-		}
-		if (mol < 100.0)
-		{
-			return $"{mol:F1} mol";
-		}
-		return $"{mol:F0} mol";
-	}
-
-	private static string FormatMass(double kg)
-	{
-		if (kg >= 1.0)
-		{
-			return $"{kg:F2} kg";
-		}
-		if (kg >= 0.001)
-		{
-			return $"{kg * 1000.0:F0} g";
-		}
-		return $"{(kg * 1e6):F0} mg";
-	}
-
-	private static string FormatVolume(double m3)
-	{
-		double liters = m3 * 1000.0;
-		if (liters >= 1000.0)
-		{
-			return $"{liters / 1000.0:F2} m^3";
-		}
-		return $"{liters:F0} L";
 	}
 }

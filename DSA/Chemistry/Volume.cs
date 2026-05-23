@@ -4,6 +4,15 @@ using System.Linq;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
 
+// Public for BoxSim UI and other UI, but unable to modify the volume's contents
+public class ResourceDisplayEntry
+{
+    public SpeciesPhase SpeciesPhase;
+    public double n;
+    public double Mass;
+    public double ResourceVolume;
+}
+
 // A volume represents something that contains matter
 // The matter may be made up of numerous species, existing as gas, liquid, and solid phases
 public class Volume : Inventory<SpeciesPhaseResource>
@@ -73,27 +82,19 @@ public class Volume : Inventory<SpeciesPhaseResource>
         }
     }
 
-    public VolumeDisplayInfo GetInfo()
+    // TODO: Cache this if multiple calls happen in the same frame, but remember to invalidate the cache
+    public List<ResourceDisplayEntry> GetInfo()
     {
-        var info = new VolumeDisplayInfo
-        {
-            T = T,
-            P = P,
-            V = Volume,
-            U = U,
-            S = S,
-            C_v = C_v,
-            Resources = new List<ResourceDisplayEntry>()
-        };
+        List<ResourceDisplayEntry> info = new List<ResourceDisplayEntry>();
         foreach (SpeciesPhaseResource resource in Resources)
         {
             double v = resource.SpeciesPhase.EquationOfState.Getv(T, P);
-            info.Resources.Add(new ResourceDisplayEntry
+            info.Add(new ResourceDisplayEntry
             {
                 SpeciesPhase = resource.SpeciesPhase,
                 n = resource.n,
                 Mass = resource.SpeciesPhase.Species.MolarMass * resource.n,
-                PhaseVolume = v * resource.n
+                ResourceVolume = v * resource.n
             });
         }
         return info;
@@ -512,27 +513,35 @@ public class Volume : Inventory<SpeciesPhaseResource>
         return false; // Stub: pumps not implemented yet
     }
 
+    // public override bool MaybeAdd(SpeciesPhaseResource resource)
+    // {
+    //     return false; // Stub: pumps not implemented yet
+    // }
+
+    // Temporary methods so BoxSim works
+    // There's nothing more permanent than a temporary solution
+    // We assume whatever is driving BoxSim has infinite pump power
     public override bool MaybeAdd(SpeciesPhaseResource resource)
     {
-        return false; // Stub: pumps not implemented yet
+        // Figure out if a resource of this species phase already exists
+        if (speciesPhaseToResource.TryGetValue(resource.SpeciesPhase, out SpeciesPhaseResource existingResource))
+        {
+            existingResource.n += resource.n;
+        }
+        else
+        {
+            Resources.Add(resource);
+        }
+        RebuildIndexes();
+        DeriveQuantities();
+        return true;
     }
-}
 
-public class VolumeDisplayInfo
-{
-    public double T;
-    public double P;
-    public double V;
-    public double U;
-    public double S;
-    public double C_v;
-    public List<ResourceDisplayEntry> Resources;
-}
-
-public class ResourceDisplayEntry
-{
-    public SpeciesPhase SpeciesPhase;
-    public double n;
-    public double Mass;
-    public double PhaseVolume;
+    public void Clear()
+    {
+        Resources.Clear();
+        UTarget = 0.0;
+        RebuildIndexes();
+        DeriveQuantities();
+    }
 }

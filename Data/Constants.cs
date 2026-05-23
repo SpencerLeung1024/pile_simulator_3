@@ -1,7 +1,57 @@
 using System;
+using System.Collections.Generic;
 
 public class Constants
 {
+    // SI prefixes
+    public static readonly Dictionary<string, double> prefixToValue = new Dictionary<string, double>
+    {
+        {"Y", 1e24},
+        {"Z", 1e21},
+        {"E", 1e18},
+        {"P", 1e15},
+        {"T", 1e12},
+        {"G", 1e9},
+        {"M", 1e6},
+        {"k", 1e3},
+        {"h", 1e2},
+        {"da", 1e1},
+        {"d", 1e-1},
+        {"c", 1e-2},
+        {"m", 1e-3},
+        {"u", 1e-6},
+        {"n", 1e-9},
+        {"p", 1e-12},
+        {"f", 1e-15},
+        {"a", 1e-18},
+        {"z", 1e-21},
+        {"y", 1e-24}
+    };
+
+    public static readonly Dictionary<int, string> exponentToPrefix = new Dictionary<int, string>
+    {
+        {24, "Y"},
+        {21, "Z"},
+        {18, "E"},
+        {15, "P"},
+        {12, "T"},
+        {9, "G"},
+        {6, "M"},
+        {3, "k"},
+        {2, "h"},
+        {1, "da"},
+        {-1, "d"},
+        {-2, "c"},
+        {-3, "m"},
+        {-6, "u"},
+        {-9, "n"},
+        {-12, "p"},
+        {-15, "f"},
+        {-18, "a"},
+        {-21, "z"},
+        {-24, "y"}
+    };
+
     // Physics
 
     // speed of light
@@ -130,6 +180,32 @@ public class Constants
     public static double year = 31556925.9747; // s, nevermind we actually do need a year for nuclide half life
 
     // Helper functions
+
+    public static string FormatUnit(double value, uint figures, string unit)
+    {
+        string valueStr;
+        string prefix = "";
+        if (value == 0.0) // Can't log 0
+        {
+            valueStr = "0." + new string('0', (int)figures - 1);
+        }
+        else
+        {
+            int exponent = (int)(Math.Floor(Math.Log10(Math.Abs(value))) / 3); // Only use the kilo prefixes
+            if (exponent <= 24 && exponent >= -24)
+            {
+                double rescaledValue = value / Math.Pow(10, exponent);
+                valueStr = rescaledValue.ToString($"G{figures}");
+                prefix = exponentToPrefix[exponent];
+            }
+            else
+            {
+                // Just use scientific notation and no prefix
+                valueStr = value.ToString($"G{figures}");
+            }
+        }
+        return $"{valueStr} {prefix}{unit}";
+    }
 
     public static double MassToEnergy(double mass)
     {
