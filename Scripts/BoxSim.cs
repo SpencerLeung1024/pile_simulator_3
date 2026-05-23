@@ -15,34 +15,39 @@ public partial class BoxSim : Node3D
 	[Export] private RichTextLabel _thermodynamicsLabel;
 	[Export] private RichTextLabel _resourcesLabel;
 
+	[Export] private LineEdit _FPSLineEdit;
 	[Export] private Button _playButton;
 	[Export] private Button _pauseButton;
 	[Export] private Button _stepButton;
 	[Export] private Button _clearButton;
 	[Export] private CheckButton _sparkCheck;
 
+	[Export] private Label _FPSLabel;
+
 	private Volume _volume = new Volume(1.0);
 	private bool _isPlaying = false;
+	private double accumulatedTime = 0.0;
+	private double FPSTarget = 1.0; // Start really low
 
-	public static Dictionary<string, string> speciesToHexCode = new Dictionary<string, string>
+	public static Dictionary<string, string> speciesToHex = new Dictionary<string, string>
 	{
-		{"H2", "bf3f3f"},
-		{"C", "3f3f3f"},
-		{"O2", "ffffff"},
-		{"CH4", "bf7f3f"},
-		{"H2O", "7fbfff"},
-		{"CO2", "7f7f7f"}
+		{"H2", "#bf3f3f"},
+		{"C", "#3f3f3f"},
+		{"O2", "#ffffff"},
+		{"Fe", "#5f5f5f"},
+		{"CH4", "#ff5f5f"},
+		{"H2O", "#7fbfff"},
+		{"CO2", "#7f7f7f"},
+		{"Fe2O3", "#ff9f7f"}
 	};
 
 	private void UpdateThermodynamicsLabel(List<ResourceDisplayEntry> info)
 	{
-		int fps = (int)Engine.GetFramesPerSecond();
 		double H = _volume.U + _volume.P * _volume.Volume;
 		double G = H - _volume.T * _volume.S;
 		double A = _volume.U - _volume.T * _volume.S;
 
 		_thermodynamicsLabel.Text =
-			$"FPS: {fps}\n" +
 			$"U: {Constants.FormatUnit(_volume.U, 3, "J")}\n" +
 			$"T: {Math.Round(_volume.T)} K\n" + // Always show as Kelvin with no SI prefix
 			$"V: {Constants.FormatUnit(_volume.Volume * 1e3, 3, "L")}\n" + // The SI unit is m^3 but "mm^3" is actually 1e-9 m^3, so show L as the unit
@@ -55,8 +60,6 @@ public partial class BoxSim : Node3D
 
 	private void UpdateResourcesLabel(List<ResourceDisplayEntry> info)
 	{
-		GD.Print("UpdateResourcesLabel:");
-
 		if (info.Count == 0)
 		{
 			_resourcesLabel.Text = "";
@@ -70,18 +73,16 @@ public partial class BoxSim : Node3D
 		System.Text.StringBuilder sb = new System.Text.StringBuilder();
 		foreach (var group in speciesGroups)
 		{
-			GD.Print($"{group.Key.Name}");
-			string hex = speciesToHexCode.GetValueOrDefault(group.Key.Name, "ffffff");
-			sb.AppendLine($"[color=#{hex}]{group.Key.Name}[/color]");
+			string hex = speciesToHex.GetValueOrDefault(group.Key.Name, "#ffffff");
+			sb.AppendLine($"[color={hex}]{group.Key.Name}[/color]");
 
 			foreach (var entry in group.OrderBy(e => (int)e.SpeciesPhase.Phase))
 			{
 				sb.AppendLine(
 					$"{entry.SpeciesPhase.Phase.ToString().ToLower()}: {Constants.FormatUnit(entry.n, 3, "mol")}, {Constants.FormatUnit(entry.Mass, 3, "kg")}, {Constants.FormatUnit(entry.ResourceVolume * 1e3, 3, "L")}");
-				GD.Print($"{entry.SpeciesPhase.Phase.ToString()} {entry.n} {entry.Mass} {entry.ResourceVolume}");
 			}
 		}
-		_resourcesLabel.Text = sb.ToString().TrimEnd();
+		_resourcesLabel.Text = sb.ToString().Replace("\r\n", "\n");
 	}
 
 	private void UpdateMultiMesh(List<ResourceDisplayEntry> info)
@@ -156,21 +157,21 @@ public partial class BoxSim : Node3D
 				float xCenter = xLeft + width / 2.0f;
 
 				var transform = new Transform3D(
-					new Basis().Scaled(new Vector3(width, phaseHeight, boxSize)),
+					Basis.FromScale(new Vector3(width, phaseHeight, boxSize)),
 					new Vector3(xCenter, yCenter, 0)
 				);
 
 				_multiMeshSpeciesPhase.Multimesh.SetInstanceTransform(instanceIndex, transform);
 
-				string hex = speciesToHexCode.GetValueOrDefault(entry.SpeciesPhase.Species.Name, "ffffff");
-				var color = new Color($"#{hex}");
+				string hex = speciesToHex.GetValueOrDefault(entry.SpeciesPhase.Species.Name, "#ffffff");
+				var color = new Color(hex);
 				if (entry.SpeciesPhase.Phase == Phase.Liquid)
 				{
-					color = color.Darkened(0.25f);
+					color = color.Lerp(new Color("#000000"), 0.25f);
 				}
 				else if (entry.SpeciesPhase.Phase == Phase.Solid)
 				{
-					color = color.Darkened(0.5f);
+					color = color.Lerp(new Color("#000000"), 0.5f);
 				}
 				_multiMeshSpeciesPhase.Multimesh.SetInstanceColor(instanceIndex, color);
 
@@ -187,6 +188,10 @@ public partial class BoxSim : Node3D
 		UpdateThermodynamicsLabel(info);
 		UpdateResourcesLabel(info);
 		UpdateMultiMesh(info);
+		GD.Print("Thermodynamics:");
+		GD.Print(_thermodynamicsLabel.Text);
+		GD.Print("Resources:");
+		GD.Print(_resourcesLabel.Text);
 	}
 
 	private void OnAddSpeciesPhase()
@@ -226,6 +231,15 @@ public partial class BoxSim : Node3D
 
 		_volume.Solve();
 		UpdateUI();
+	}
+
+	private void OnFPSLineEditChanged(string text)
+	{
+		if (!double.TryParse(text, out double fps) || fps <= 0.5) // Prohibit 0.0 so we don't divide by zero
+		{
+			return;
+		}
+		FPSTarget = fps;
 	}
 
 	private void OnPlay()
@@ -276,6 +290,7 @@ public partial class BoxSim : Node3D
 		_speciesPhaseDropdown.Selected = 0;
 
 		_addSpeciesPhaseButton.Pressed += OnAddSpeciesPhase;
+		_FPSLineEdit.TextChanged += OnFPSLineEditChanged;
 		_playButton.Pressed += OnPlay;
 		_pauseButton.Pressed += OnPause;
 		_stepButton.Pressed += OnStep;
@@ -293,6 +308,28 @@ public partial class BoxSim : Node3D
 			SpeciesPhase = AllSpeciesPhases.nameToPhase["O2"],
 			n = 100
 		});
+		/*
+		_volume.MaybeAdd(new SpeciesPhaseResource
+		{
+			SpeciesPhase = AllSpeciesPhases.nameToPhase["Fe2O3(cr)"],
+			n = 50
+		});
+		_volume.MaybeAdd(new SpeciesPhaseResource
+		{
+			SpeciesPhase = AllSpeciesPhases.nameToPhase["H2O(L)"],
+			n = 1000
+		});
+		_volume.MaybeAdd(new SpeciesPhaseResource
+		{
+			SpeciesPhase = AllSpeciesPhases.nameToPhase["C(gr)"],
+			n = 25
+		});
+		*/
+		_volume.MaybeAdd(new SpeciesPhaseResource
+		{
+			SpeciesPhase = AllSpeciesPhases.nameToPhase["C2H5OH"],
+			n = 50
+		});
 		_volume.UTarget = _volume.U;
 
 		UpdateUI();
@@ -301,9 +338,20 @@ public partial class BoxSim : Node3D
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
+		int fps = (int)Engine.GetFramesPerSecond();
+		_FPSLabel.Text = $"FPS: {fps}";
+	}
+
+	public override void _PhysicsProcess(double delta)
+	{
 		if (_isPlaying)
 		{
-			_volume.Solve();
+			accumulatedTime += delta;
+			while (accumulatedTime >= 1.0 / FPSTarget)
+			{
+				accumulatedTime -= 1.0 / FPSTarget;
+				_volume.Solve();
+			}
 			UpdateUI();
 		}
 	}

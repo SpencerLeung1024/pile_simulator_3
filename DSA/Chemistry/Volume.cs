@@ -1,8 +1,8 @@
+using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics.LinearAlgebra;
-using MathNet.Numerics.LinearAlgebra.Double;
 
 // Public for BoxSim UI and other UI, but unable to modify the volume's contents
 public class ResourceDisplayEntry
@@ -48,15 +48,19 @@ public class Volume : Inventory<SpeciesPhaseResource>
     public Volume(double volume)
     {
         Resources = new List<SpeciesPhaseResource>();
-        this.Volume = volume;
-        //this.T = Constants.Tmin;
-        //this.P = Constants.Pmin;
+        Volume = volume;
+        //T = Constants.Tmin;
+        //P = Constants.Pmin;
         // The minimum values cause massive instabilities
-        this.T = Constants.NISTNormalTemperature;
-        this.P = Constants.bar;
+        T = Constants.NISTNormalTemperature;
+        P = Constants.bar;
         speciesToResources = new Dictionary<Species, List<SpeciesPhaseResource>>();
         speciesPhaseToResource = new Dictionary<SpeciesPhase, SpeciesPhaseResource>();
         freeElements = new Dictionary<Element, double>();
+        for (int m = 0; m < 3; m++)
+        {
+            vec_N[m] = Constants.N_mMin; // Avoid zero values that break the solver
+        }
     }
 
     protected override void DeriveQuantities()
@@ -68,6 +72,7 @@ public class Volume : Inventory<SpeciesPhaseResource>
             vec_V[m] = 0.0;
         }
         UsedVolume = 0.0;
+        C_v = 0.0;
         U = 0.0;
         S = 0.0;
         foreach (SpeciesPhaseResource resource in Resources)
@@ -153,14 +158,14 @@ public class Volume : Inventory<SpeciesPhaseResource>
             Species species = speciesPhase.Species;
             if (!speciesToResources.ContainsKey(species))
             {
-                speciesToResources[species] = new List<SpeciesPhaseResource>()
-                {
-                    resource
-                };
+                speciesToResources[species] = new List<SpeciesPhaseResource>();
             }
+            speciesToResources[species].Add(resource);
             speciesPhaseToResource[speciesPhase] = resource;
             existingElements.UnionWith(species.Formula.Keys);
         }
+        // Include free elements
+        existingElements.UnionWith(freeElements.Keys);
         ulong newBitmask = FormulaTable.GetViewBitmask(existingElements.ToList());
         // Invalidate vec_lambda if bitmask changed
         if (newBitmask != bitmask)
@@ -186,34 +191,141 @@ public class Volume : Inventory<SpeciesPhaseResource>
         // Note that what the STANJAN PDF calls "species", I have used classes called "SpeciesPhase".
         // Variable names are still "species" though
 
+        // If we have less than n_jMin moles of each free element, it's impossible to make any realizable amount of species, so skip
+        if (freeElements.Count == 0 || freeElements.Values.Max() < Constants.n_jMin)
+        {
+            return;
+        }
+
+        // Make sure vec_N is up to date
+        for (int m = 0; m < 3; m++)
+        {
+            vec_N[m] = 0.0;
+        }
+        for (int j = 0; j < Resources.Count; j++)
+        {
+            SpeciesPhaseResource resource = Resources[j];
+            int phaseAsIndex = (int)resource.SpeciesPhase.Phase;
+            vec_N[phaseAsIndex] += resource.n;
+        }
+        for (int m = 0; m < 3; m++)
+        {
+            if (vec_N[m] < Constants.N_mMin)
+            {
+                vec_N[m] = Constants.N_mMin; // Avoid zero values that break the solver
+            }
+        }
+
         Element[] viewElements; // i = an element, a = num elements, elements are in order of increasing Z
         SpeciesPhase[] viewSpecies; // j = a species, s = num species, unordered, but consistent with the order of their addition to AllSpeciesPhases
-        Matrix<Double> view; // view[i, j] = n_ij = count of element i in species j
+        Matrix<double> view; // view[i, j] = n_ij = count of element i in species j
         // The nice thing about Vector<T> and Matrix<T> is that they are initialized with zeros
         FormulaTable.GetView(bitmask, out viewElements, out viewSpecies, out view);
         int a = viewElements.Length;
         int s = viewSpecies.Length;
 
+        // GPT-5.5: Pre-solve vec_lambda so the dominant species has x_j close to 1 and J doesn't blow up
+        // I have no idea how this works
+        Vector<double> initialMu = Vector<double>.Build.Dense(s);
+        for (int j = 0; j < s; j++)
+        {
+            initialMu[j] = viewSpecies[j].Getmu(T, P, 1.0);
+        }
+        List<int> selectedSpecies = new List<int>();
+        List<Vector<double>> orthonormalColumns = new List<Vector<double>>();
+        foreach (int j in Enumerable.Range(0, s).OrderBy(j => initialMu[j]))
+        {
+            // I think liquids and solids mess this up
+            if (viewSpecies[j].Phase != Phase.Gas)
+            {
+                continue;
+            }
+
+            Vector<double> residual = view.Column(j).Clone();
+            foreach (Vector<double> q in orthonormalColumns)
+            {
+                residual -= q * residual.DotProduct(q);
+            }
+
+            double norm = residual.L2Norm();
+            if (norm <= 1e-9)
+            {
+                continue;
+            }
+
+            selectedSpecies.Add(j);
+            orthonormalColumns.Add(residual / norm);
+            if (selectedSpecies.Count == a)
+            {
+                break;
+            }
+        }
+        if (selectedSpecies.Count == a)
+        {
+            Matrix<double> A_init = Matrix<double>.Build.Dense(a, a);
+            Vector<double> b_init = Vector<double>.Build.Dense(a);
+            for (int row = 0; row < a; row++)
+            {
+                int j = selectedSpecies[row];
+                for (int i = 0; i < a; i++)
+                {
+                    A_init[row, i] = view[i, j];
+                }
+                b_init[row] = initialMu[j] / (Constants.R * T);
+            }
+            vec_lambda = A_init.Solve(b_init);
+        }
+
         // We need to declare these outside the loop
-        Vector<double> vec_mu;
+        Vector<double> vec_mu = Vector<double>.Build.Dense(s);
         Vector<double> vec_x;
         Vector<double> vec_n;
 
         for (int reactionStep = 0; reactionStep < Constants.MaxReactionSteps; reactionStep++)
         {
+            GD.Print($"reactionStep = {reactionStep}");
+            GD.Print($"vec_N = [{string.Join(", ", vec_N)}]");
+
             // `docs/chemistry/solver/opus_4_7.md`:
             // mu_j is a non-linear function so there's no way to optimize it other than calling it for each species
-            // But the logic for x_j is the same for all species, and can be vectorized
-
-            vec_mu = Vector<double>.Build.Dense(s); // m_j = chemical potential of species j
             // Calculate mu_j of every species
             for (int j = 0; j < s; j++)
             {
-                vec_mu[j] = viewSpecies[j].Getmu(T, P, 1.0); // Use the pure species chemical potential (mole fraction x_j = 1)
+                vec_mu[j] = viewSpecies[j].Getmu(T, P, 1.0);
+                // mu_j = chemical potential of species j
+                // Use the pure species chemical potential (mole fraction x_j = 1)
             }
+
+            // But the logic for x_j is the same for all species, and can be vectorized
             vec_x = (-vec_mu / (Constants.R * T) + view.TransposeThisAndMultiply(vec_lambda)).PointwiseExp();
             // x_j = mole fraction of species j in its phase
             // Look how clean this is
+
+            GD.Print($"vec_mu = [{string.Join(", ", vec_mu)}]");
+            GD.Print($"vec_x = [{string.Join(", ", vec_x)}]");
+
+            // Normalize by phase
+            /*
+            for (int m = 0; m < 3; m++)
+            {
+                double myN_m = 0.0;
+                for (int j = 0; j < s; j++)
+                {
+                    if ((int)viewSpecies[j].Phase == m)
+                    {
+                        myN_m += vec_x[j];
+                    }
+                }
+                for (int j = 0; j < s; j++)
+                {
+                    if ((int)viewSpecies[j].Phase == m)
+                    {
+                        vec_x[j] /= myN_m;
+                    }
+                }
+            }
+            GD.Print($"vec_x = [{string.Join(", ", vec_x)}]");
+            */
 
             // Precompute n_j = N_m * x_j (moles of species j = total moles in phase m * mole fraction of species j in its phase)
             // This is in the matrix product for quadrant Q
@@ -245,6 +357,9 @@ public class Volume : Inventory<SpeciesPhaseResource>
                 }
             }
 
+            GD.Print($"vec_n = [{string.Join(", ", vec_n)}]");
+            GD.Print($"vec_p = [{string.Join(", ", vec_p)}]");
+
             // J @ Δx = -F
             // Ax = b
 
@@ -259,6 +374,8 @@ public class Volume : Inventory<SpeciesPhaseResource>
             Vector<double> vec_Z = X_phase.ColumnSums();
             // Stuff into F
             Vector<double>vec_F = Vector<double>.Build.DenseOfEnumerable(vec_H.Concat(vec_Z - 1.0));
+
+            GD.Print($"vec_F = [{string.Join(", ", vec_F)}]");
 
             // Build J
             Matrix<double> J = Matrix<double>.Build.Dense(a + 3, a + 3);
@@ -287,21 +404,32 @@ public class Volume : Inventory<SpeciesPhaseResource>
             J.SetSubMatrix(0, a, a, 3, D);
             J.SetSubMatrix(a, 3, 0, a, D.Transpose());
 
+            GD.Print("J = ");
+            for (int i = 0; i < J.RowCount; i++)
+            {
+                GD.Print($"[{string.Join(", ", J.Row(i))}]");
+            }
+
             // Solve
-            Vector<double> delta_x = J.Solve(-vec_F);
+            //Vector<double> delta_x = J.Solve(-vec_F);
+            // SVD solving is more stable than the default LU when J is near singular
+            Vector<double> delta_x = J.Svd().Solve(-vec_F);
+
+            GD.Print($"delta_x = [{string.Join(", ", delta_x)}]");
+
+            // Figure out the damping needed to not have any N_m go negative
+            double damping = 1.0;
+            for (int m = 0; m < 3; m++)
+            {
+                double delta_N_mMax = vec_N[m] - Constants.N_mMin;
+                damping = Math.Min(damping, Math.Abs(delta_N_mMax / delta_x[a + m]));
+            }
+            delta_x *= damping;
+            GD.Print($"delta_x = [{string.Join(", ", delta_x)}]");
 
             // Apply Δx
             vec_lambda += delta_x.SubVector(0, a);
             vec_N += delta_x.SubVector(a, 3);
-
-            // Clamp N_m
-            for (int m = 0; m < 3; m++)
-            {
-                if (vec_N[m] < Constants.N_mMin)
-                {
-                    vec_N[m] = Constants.N_mMin;
-                }
-            }
 
             // Early exit conditions
             if (vec_H.PointwiseAbs().Maximum() < Constants.H_iTolerance
@@ -312,11 +440,7 @@ public class Volume : Inventory<SpeciesPhaseResource>
         }
 
         // Get += n_j
-        vec_mu = Vector<double>.Build.Dense(s);
-        for (int j = 0; j < s; j++)
-        {
-            vec_mu[j] = viewSpecies[j].Getmu(T, P, 1.0);
-        }
+        // mu_j from the last reaction step is still valid
         vec_x = (-vec_mu / (Constants.R * T) + view.TransposeThisAndMultiply(vec_lambda)).PointwiseExp();
         vec_n = Vector<double>.Build.Dense(s);
         for (int j = 0; j < s; j++)
@@ -392,7 +516,7 @@ public class Volume : Inventory<SpeciesPhaseResource>
         for (int VPStep = 0; VPStep < Constants.MaxVPSteps; VPStep++)
         {
             DeriveQuantities();
-            double VError = (vec_V.Sum() - Volume);
+            double VError = vec_V.Sum() - Volume;
             double relVError = VError / Volume;
             if (Math.Abs(relVError) < Constants.VTolerance)
             {
@@ -417,31 +541,52 @@ public class Volume : Inventory<SpeciesPhaseResource>
         // For a gas: f_j^gas = φ_j^gas * P_j where P_j = n_j * R * T / V_gas is the partial pressure under the immiscible-gas assumption
         // For a pure condensed phase: f_j^cond = φ_j^cond * P (system pressure, no mixing)
         // Setting f_gas = f_cond gives the equilibrium gas moles n_j^gas,eq
-        foreach((Species species, List<SpeciesPhaseResource> resources) in speciesToResources)
+        foreach((Species species, List<SpeciesPhaseResource> realResources) in speciesToResources)
         {
-            if (resources.Count == 1)
+            // Create fictional phases with 0 moles in case we need to move moles to them
+            // They will only be added to Resources if they actually received anything
+
+            // All phases of this species
+            List<SpeciesPhase> fakeSpeciesPhases = species.Phases.Except(realResources.Select(r => r.SpeciesPhase)).ToList();
+            List<SpeciesPhaseResource> fakeResources = new List<SpeciesPhaseResource>();
+
+            List<SpeciesPhaseResource> phaseResources = new List<SpeciesPhaseResource>();
+            phaseResources.AddRange(realResources);
+            foreach (SpeciesPhase speciesPhase in fakeSpeciesPhases)
+            {
+                SpeciesPhaseResource fakeResource = new SpeciesPhaseResource()
+                {
+                    SpeciesPhase = speciesPhase,
+                    n = 0.0
+                };
+                phaseResources.Add(fakeResource);
+                fakeResources.Add(fakeResource); // We will need this later, to either add it to Resources or let it be garbage collected
+            }
+
+            // This species has no defined phase changes
+            if (phaseResources.Count == 1)
             {
                 continue;
             }
             
-            SpeciesPhaseResource gasResource = resources.Find(r => r.SpeciesPhase.Phase == Phase.Gas);
+            SpeciesPhaseResource gasResource = phaseResources.Find(r => r.SpeciesPhase.Phase == Phase.Gas);
             if (gasResource == null)
             {
                 // No gas phase for this species; saturation vapor pressure cannot be determined
                 // move toward lowest-fugacity condensed phase
                 // TODO: ban the case of diamond -> graphite
                 // SolvePhases bypasses Species.DissociationTemperature
-                double[] logphis = resources.Select(r => r.SpeciesPhase.EquationOfState.GetLogphi(T, P, r.SpeciesPhase.EquationOfState.Getv(T, P))).ToArray();
+                double[] logphis = phaseResources.Select(r => r.SpeciesPhase.EquationOfState.GetLogphi(T, P, r.SpeciesPhase.EquationOfState.Getv(T, P))).ToArray();
                 double minLogphi = logphis.Min();
                 int indexOfMin = logphis.ToList().IndexOf(minLogphi);
-                for (int i = 0; i < resources.Count; i++)
+                for (int i = 0; i < phaseResources.Count; i++)
                 {
                     if (i != indexOfMin)
                     {
-                        double n_total = resources[i].n + resources[indexOfMin].n;
-                        double n_target = resources[i].n * Constants.PhaseDamping; // Damped movement
-                        resources[i].n -= n_target;
-                        resources[indexOfMin].n += n_target;
+                        double n_total = phaseResources[i].n + phaseResources[indexOfMin].n;
+                        double n_target = phaseResources[i].n * Constants.PhaseDamping; // Damped movement
+                        phaseResources[i].n -= n_target;
+                        phaseResources[indexOfMin].n += n_target;
                     }
                 }
             }
@@ -454,7 +599,7 @@ public class Volume : Inventory<SpeciesPhaseResource>
                     V_gas = 1e-6; // Avoid division by zero
                 }
 
-                foreach (SpeciesPhaseResource condResource in resources)
+                foreach (SpeciesPhaseResource condResource in phaseResources)
                 {
                     if (condResource == gasResource) continue;
 
@@ -495,6 +640,15 @@ public class Volume : Inventory<SpeciesPhaseResource>
                     break;
                 }
             }
+
+            // If any fake resources ended up with real amounts, add them to Resources
+            foreach (SpeciesPhaseResource fakeResource in fakeResources)
+            {
+                if (fakeResource.n > 0.0)
+                {
+                    Resources.Add(fakeResource);
+                }
+            }
         }
     }
 
@@ -503,12 +657,11 @@ public class Volume : Inventory<SpeciesPhaseResource>
         Dissociate();
         RebuildIndexes();
         DeriveQuantities();
-        UTarget = U; // Conserve energy after dissociation, before reaction changes composition
         SolveReactions();
         SolveUT();
         SolveVP();
-        RebuildIndexes();
-        SolvePhases();
+        //RebuildIndexes();
+        //SolvePhases();
     }
 
     // Volume is a thermodynamic simulation, so putting things in the box requires work

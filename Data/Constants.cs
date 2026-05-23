@@ -152,7 +152,7 @@ public class Constants
     public const double DissociationThreshold = 1e-3; // fraction per frame, 0.1%
 
     // SolveReactions
-    public const uint MaxReactionSteps = 50;
+    public const uint MaxReactionSteps = 20;
     public const double N_mMin = 1e-6; // mol, N_m for phase m is clamped to be > this after every Newton step
     public const double H_iTolerance = 1e-6; // mol element i unused, an early exit condition for SolveReactions
     public const double Z_mTolerance = 1e-6; // mole fraction of phase m away from 1, an early exit condition for SolveReactions

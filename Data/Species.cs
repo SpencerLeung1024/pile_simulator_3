@@ -165,9 +165,27 @@ public static class AllSpecies
             "O2", // "O2" diatomic oxygen (line 8018), "O2(L)" liquid oxygen (line 15766)
             "CH4", // "CH4" methane (line 2521), "CH4(L)" liquid methane (line 15506)
             "H2O", // "H2O" gaseous water (line 5755), "H2O(L)" liquid water (line 12481), "H2O(cr)" ice (line 12476)
-            "CO2" // "CO2" carbon dioxide (line 2701)
+            "CO2", // "CO2" carbon dioxide (line 2701)
+
             // Note that I have left out "CO" carbon monoxide (line 2623). At high temperatures, CO is a significant part of the system
             // We can always add that later, or use subset = null to load everything
+
+            // Oh, I think I know why the solver breaks
+            // Between C(gr) and H2O(cr), H2O(cr) is far better preferred
+            // Meanwhile, H2O(L) is the only liquid species
+            // In a system with effectively zero C(gr), liquid and solid are both entirely H2O, J is near singular, and the solver breaks
+
+            // Add a substance that is know to prefer a liquid phase, and has no solid phase in the dataset
+            "C2H5OH", // "C2H5OH" gaseous ethanol (line 3153), "C2H5OH(L)" liquid ethanol (line 15532)
+
+            // Nope, J didn't budge. H2O > C2H5OH
+            // Maybe try something to suck up the oxygen into a solid
+            //"Fe", // "Fe" gaseous iron (line 4844), "Fe(L)" liquid iron (line 12206), "Fe(a)" below Lambda, a above Lambda, c, d, (line 12180 - 12201)
+            //"Fe2O3" // "Fe2O3(cr)" hematite (line 12306 and 12314), below and above Curie
+            // There's some weirdness with how Fe and Fe2O3 are loaded. I can't reliably get their species phases, and elemental iron doesn't show up in free elements
+
+            // Next solution: modify thermo.inp to ban H2O(cr)
+            // Line 12476 now refers to oxygen dihydride (OH2(cr)), which totally exists
         };
         NASA9Loader.Load(path, subset);
 
@@ -181,6 +199,7 @@ public static class AllSpecies
         foreach (Species species in list)
         {
             species.DissociationTemperature = 600.0;
+            // *Someone* made DeriveQuantities private so we have to manually set DissociationActivationEnergy
             species.DissociationActivationEnergy = -Math.Log(Constants.DissociationThreshold) * Constants.R * species.DissociationTemperature;
         }
 

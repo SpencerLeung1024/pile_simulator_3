@@ -13,7 +13,7 @@ transform_format = 1
 use_colors = true
 mesh = SubResource("BoxMesh_bdxkw")
 
-[node name="BoxSim" type="Node3D" unique_id=1491472761 node_paths=PackedStringArray("_multiMeshSpeciesPhase", "_speciesPhaseDropdown", "_amountLineEdit", "_temperatureLineEdit", "_addSpeciesPhaseButton", "_thermodynamicsLabel", "_resourcesLabel", "_playButton", "_pauseButton", "_stepButton", "_clearButton", "_sparkCheck")]
+[node name="BoxSim" type="Node3D" unique_id=1491472761 node_paths=PackedStringArray("_multiMeshSpeciesPhase", "_speciesPhaseDropdown", "_amountLineEdit", "_temperatureLineEdit", "_addSpeciesPhaseButton", "_thermodynamicsLabel", "_resourcesLabel", "_FPSLineEdit", "_playButton", "_pauseButton", "_stepButton", "_clearButton", "_sparkCheck", "_FPSLabel")]
 script = ExtResource("1_ifjut")
 _multiMeshSpeciesPhase = NodePath("MultiMeshSpeciesPhase")
 _speciesPhaseDropdown = NodePath("UI/VBoxTopLeft/SpeciesPhaseDropdown")
@@ -22,11 +22,13 @@ _temperatureLineEdit = NodePath("UI/VBoxTopLeft/TemperatureLineEdit")
 _addSpeciesPhaseButton = NodePath("UI/VBoxTopLeft/AddSpeciesPhaseButton")
 _thermodynamicsLabel = NodePath("UI/ThermodynamicsLabel")
 _resourcesLabel = NodePath("UI/ResourcesLabel")
+_FPSLineEdit = NodePath("UI/HBoxBottom/FPSLineEdit")
 _playButton = NodePath("UI/HBoxBottom/PlayButton")
 _pauseButton = NodePath("UI/HBoxBottom/PauseButton")
 _stepButton = NodePath("UI/HBoxBottom/StepButton")
 _clearButton = NodePath("UI/HBoxBottom/ClearButton")
 _sparkCheck = NodePath("UI/HBoxBottom/SparkCheck")
+_FPSLabel = NodePath("UI/FPSLabel")
 
 [node name="UI" type="Control" parent="." unique_id=977306495]
 layout_mode = 3
@@ -69,8 +71,7 @@ offset_top = -194.0
 offset_right = 310.0
 offset_bottom = -10.0
 grow_vertical = 0
-text = "FPS: 42
-U: -12.3 MJ
+text = "U: -12.3 MJ
 T: 456 K
 V: 1.00 kL
 P: 357 kPa
@@ -112,6 +113,10 @@ offset_bottom = -10.0
 grow_horizontal = 2
 grow_vertical = 0
 
+[node name="FPSLineEdit" type="LineEdit" parent="UI/HBoxBottom" unique_id=1118539165]
+layout_mode = 2
+placeholder_text = "FPS"
+
 [node name="PlayButton" type="Button" parent="UI/HBoxBottom" unique_id=382290760]
 layout_mode = 2
 text = "Play"
@@ -131,6 +136,21 @@ text = "Clear Contents"
 [node name="SparkCheck" type="CheckButton" parent="UI/HBoxBottom" unique_id=1004553518]
 layout_mode = 2
 text = "Spark"
+
+[node name="FPSLabel" type="Label" parent="UI" unique_id=1544679780]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -110.0
+offset_top = -33.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "FPS: 42"
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1566697329]
 transform = Transform3D(0.98470664, -0.087110355, 0.15087955, 0, 0.8660253, 0.5, -0.17422071, -0.49235332, 0.8527809, 0, 0, 0)
