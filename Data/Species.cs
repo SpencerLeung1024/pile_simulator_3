@@ -181,6 +181,7 @@ public static class AllSpecies
         foreach (Species species in list)
         {
             species.DissociationTemperature = 600.0;
+            species.DissociationActivationEnergy = -Math.Log(Constants.DissociationThreshold) * Constants.R * species.DissociationTemperature;
         }
 
         BuildIndexes();

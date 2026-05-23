@@ -105,6 +105,9 @@ Gas NaN NaN NaN
 ```
 
 - DeepSeek V4 Pro was able to stop NaNs from appearing using a lot of conditioning, but the box is still making too much H2O (474 mols instead of 200)
+- - See `docs/chemistry/solver_debug/deepseek_v4_pro` `epm_nan_fix_journey.md` and `Volume.csgo`
+- GPT-5.5 did something else, which seemed to be correct. The solution now favors 100 mol CO2
+- - See `docs/chemistry/solver_debug/gpt_5_5` `water_overproduction_fix.md` and `Volume.csgo`
 
 - Implied assumptions:
 - - There is one state for the entire box. All SpeciesPhases obey the same temperature and pressure from Volume
