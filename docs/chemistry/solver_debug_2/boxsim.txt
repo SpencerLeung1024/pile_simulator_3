@@ -1,0 +1,217 @@
+Initial condition:
+
+Thermodynamics:
+Mass: 6.41 kg
+U: -15.7 MJ
+T: 293 K
+V: 1 kL
+P: 100 kPa
+S: 57.6 kJ/K
+H = U + PV: -15.6 MJ
+G = H - TS: -32.5 MJ
+A = U - TS: -32.6 MJ
+Resources:
+[color=#ff5f5f]CH4[/color]
+gas: 200 mol, 3.21 kg, 4.87 kL
+[color=#ffffff]O2[/color]
+gas: 100 mol, 3.2 kg, 2.44 kL
+Thermodynamics:
+Mass: 6.41 kg
+U: -15.7 MJ
+T: 293 K
+V: 1 kL
+P: 731 kPa
+S: 57.6 kJ/K
+H = U + PV: -15 MJ
+G = H - TS: -31.9 MJ
+A = U - TS: -32.6 MJ
+Resources:
+[color=#ff5f5f]CH4[/color]
+gas: 200 mol, 3.21 kg, 667 L
+[color=#ffffff]O2[/color]
+gas: 100 mol, 3.2 kg, 333 L
+
+First few spark steps:
+
+Thermodynamics:
+Mass: 6.41 kg
+U: -15.7 MJ
+T: 296 K
+V: 1 kL
+P: 738 kPa
+S: 57.7 kJ/K
+H = U + PV: -15 MJ
+G = H - TS: -32 MJ
+A = U - TS: -32.8 MJ
+Resources:
+[color=#1f1f1f]C[/color]
+gas: 5.28 umol, 63.5 ug, 17.6 uL
+solid: 5.28 umol, 63.5 ug, 0 L
+[color=#ff5f5f]CH4[/color]
+gas: 200 mol, 3.21 kg, 667 L
+[color=#7f7f7f]CO2[/color]
+gas: 28.2 mmol, 1.24 g, 93.9 mL
+[color=#7fbfff]H2O[/color]
+gas: 61.3 mmol, 1.1 g, 204 mL
+liquid: 8.38 mmol, 151 mg, 0 L
+solid: 3.46 mmol, 62.4 mg, 0 L
+[color=#ffffff]O2[/color]
+gas: 99.9 mol, 3.2 kg, 333 L
+Thermodynamics:
+Mass: 6.41 kg
+U: -15.7 MJ
+T: 303 K
+V: 1 kL
+P: 756 kPa
+S: 57.9 kJ/K
+H = U + PV: -14.9 MJ
+G = H - TS: -32.5 MJ
+A = U - TS: -33.3 MJ
+Resources:
+[color=#1f1f1f]C[/color]
+gas: 14.2 umol, 170 ug, 47.2 uL
+solid: 8.87 umol, 107 ug, 0 L
+[color=#ff5f5f]CH4[/color]
+gas: 200 mol, 3.21 kg, 666 L
+[color=#7f7f7f]CO2[/color]
+gas: 92.8 mmol, 4.08 g, 309 mL
+[color=#7fbfff]H2O[/color]
+gas: 177 mmol, 3.19 g, 590 mL
+liquid: 8.53 mmol, 154 mg, 0 L
+solid: 1.79 mmol, 32.3 mg, 0 L
+[color=#ffffff]O2[/color]
+gas: 99.8 mol, 3.19 kg, 333 L
+Thermodynamics:
+Mass: 6.41 kg
+U: -15.7 MJ
+T: 309 K
+V: 1 kL
+P: 771 kPa
+S: 58.1 kJ/K
+H = U + PV: -14.9 MJ
+G = H - TS: -32.9 MJ
+A = U - TS: -33.7 MJ
+Resources:
+[color=#1f1f1f]C[/color]
+gas: 23.2 umol, 279 ug, 77.5 uL
+solid: 9.1 umol, 109 ug, 0 L
+[color=#ff5f5f]CH4[/color]
+gas: 200 mol, 3.21 kg, 666 L
+[color=#7f7f7f]CO2[/color]
+gas: 150 mmol, 6.59 g, 499 mL
+[color=#bf3f3f]H2[/color]
+gas: 1.26 umol, 2.53 ug, 4.19 uL
+[color=#7fbfff]H2O[/color]
+gas: 290 mmol, 5.23 g, 967 mL
+liquid: 8.58 mmol, 155 mg, 0 L
+solid: 918 umol, 16.5 mg, 0 L
+[color=#ffffff]O2[/color]
+gas: 99.7 mol, 3.19 kg, 332 L
+Thermodynamics:
+Mass: 6.41 kg
+U: -15.7 MJ
+T: 314 K
+V: 1 kL
+P: 784 kPa
+S: 58.3 kJ/K
+H = U + PV: -14.9 MJ
+G = H - TS: -33.2 MJ
+A = U - TS: -34 MJ
+Resources:
+[color=#1f1f1f]C[/color]
+gas: 32.4 umol, 389 ug, 108 uL
+solid: 9.14 umol, 110 ug, 0 L
+[color=#ff5f5f]CH4[/color]
+gas: 200 mol, 3.21 kg, 666 L
+[color=#7f7f7f]CO2[/color]
+gas: 200 mmol, 8.79 g, 666 mL
+[color=#bf3f3f]H2[/color]
+gas: 2.86 umol, 5.76 ug, 9.53 uL
+[color=#7fbfff]H2O[/color]
+gas: 390 mmol, 7.03 g, 1.3 L
+liquid: 8.62 mmol, 155 mg, 0 L
+solid: 474 umol, 8.54 mg, 0 L
+[color=#ffffff]O2[/color]
+gas: 99.6 mol, 3.19 kg, 332 L
+Thermodynamics:
+Mass: 6.41 kg
+U: -15.7 MJ
+T: 319 K
+V: 1 kL
+P: 797 kPa
+S: 58.5 kJ/K
+H = U + PV: -14.9 MJ
+G = H - TS: -33.6 MJ
+A = U - TS: -34.4 MJ
+Resources:
+[color=#1f1f1f]C[/color]
+gas: 41.3 umol, 496 ug, 138 uL
+solid: 8.94 umol, 107 ug, 0 L
+[color=#ff5f5f]CH4[/color]
+gas: 200 mol, 3.2 kg, 666 L
+[color=#7f7f7f]CO2[/color]
+gas: 249 mmol, 11 g, 832 mL
+[color=#bf3f3f]H2[/color]
+gas: 4.93 umol, 9.94 ug, 16.4 uL
+[color=#7fbfff]H2O[/color]
+gas: 490 mmol, 8.83 g, 1.63 L
+liquid: 8.64 mmol, 156 mg, 0 L
+solid: 248 umol, 4.47 mg, 0 L
+[color=#ffffff]O2[/color]
+gas: 99.5 mol, 3.18 kg, 332 L
+
+Upon reaching the 900 K equilibrium:
+
+Thermodynamics:
+Mass: 6.41 kg
+U: -15.7 MJ
+T: 897 K
+V: 1 kL
+P: 2.23 MPa
+S: 77.2 kJ/K
+H = U + PV: -13.5 MJ
+G = H - TS: -82.7 MJ
+A = U - TS: -84.9 MJ
+Resources:
+[color=#1f1f1f]C[/color]
+gas: 958 mmol, 11.5 g, 3.2 L
+solid: 254 mmol, 3.05 g, 0 L
+[color=#ff5f5f]CH4[/color]
+gas: 185 mol, 2.97 kg, 618 L
+[color=#7f7f7f]CO2[/color]
+gas: 13.9 mol, 613 g, 46.5 L
+[color=#bf3f3f]H2[/color]
+gas: 2.05 mol, 4.13 g, 6.85 L
+[color=#7fbfff]H2O[/color]
+gas: 27 mol, 487 g, 90.3 L
+solid: 1.22 mol, 22.1 g, 0 L
+[color=#ffffff]O2[/color]
+gas: 72 mol, 2.3 kg, 240 L
+
+Close to equilibrium (O2 eventually goes below 1 umol and disappears):
+
+Thermodynamics:
+Mass: 6.41 kg
+U: -15.7 MJ
+T: 903 K
+V: 1 kL
+P: 2.54 MPa
+S: 83.7 kJ/K
+H = U + PV: -13.2 MJ
+G = H - TS: -88.8 MJ
+A = U - TS: -91.3 MJ
+Resources:
+[color=#1f1f1f]C[/color]
+gas: 40.9 mol, 491 g, 121 L
+solid: 289 mmol, 3.47 g, 0 L
+[color=#ff5f5f]CH4[/color]
+gas: 130 mol, 2.08 kg, 384 L
+[color=#7f7f7f]CO2[/color]
+gas: 29 mol, 1.28 kg, 85.7 L
+[color=#bf3f3f]H2[/color]
+gas: 162 mmol, 327 mg, 480 mL
+[color=#7fbfff]H2O[/color]
+gas: 139 mol, 2.5 kg, 411 L
+solid: 1.25 mol, 22.4 g, 0 L
+[color=#ffffff]O2[/color]
+gas: 952 mmol, 30.5 g, 2.82 L

@@ -186,6 +186,9 @@ public static class AllSpecies
 
             // Next solution: modify thermo.inp to ban H2O(cr)
             // Line 12476 now refers to oxygen dihydride (OH2(cr)), which totally exists
+
+            // Okay it's been a while. I've now disabled liquids and solids in SolveReactions since no amount of stabilization would make them behave
+            // H2O(cr) is re-enabled. The solver makes a few moles of it even at 1000 K, which is odd, but whatever
         };
         NASA9Loader.Load(path, subset);
 

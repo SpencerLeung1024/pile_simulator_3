@@ -96,7 +96,7 @@ public partial class BoxSim : Node3D
 					$"{entry.SpeciesPhase.Phase.ToString().ToLower()}: {Constants.FormatUnit(entry.n, 3, "mol")}, {Constants.FormatUnit(entry.ResourceMass, 3, "kg")}, {Constants.FormatUnit(entry.ResourceVolume * 1e3, 3, "L")}");
 			}
 		}
-		_resourcesLabel.Text = sb.ToString().Replace("\r\n", "\n");
+		_resourcesLabel.Text = sb.ToString().Replace("\r\n", "\n").TrimEnd();
 	}
 
 	private void UpdateMultiMesh(List<ResourceDisplayEntry> info)

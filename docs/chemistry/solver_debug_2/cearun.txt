@@ -9,11 +9,11 @@
 
 
   
- ### CEA analysis performed on Sat 23-May-2026 04:04:31
+ ### CEA analysis performed on Sat 23-May-2026 16:59:42
   
  # Problem Type: "Combustion at Assigned Volume"
   
- prob case = PileSimulator3_5359 uv
+ prob case = PileSimulator3_2893 uv
   
  # Density (1 value):
  rho,kg/m**3= 6.4

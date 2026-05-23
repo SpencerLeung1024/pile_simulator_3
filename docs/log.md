@@ -1,5 +1,10 @@
 # Log
 
+## 2026-05-23: Gaseous carbon?
+- DeepSeek V4 Pro and GPT-5.5 tried to stabilize the solver
+- In the end, I couldn't get the solver to accept liquids or solids
+- BoxSim now finds an equilibrium at 1000 K with mostly CH4 and gaseous H2O, with bits of CO2 and gaseous C
+
 ## 2026-05-22: BoxSim v0.0?
 - DeepSeek V4 Pro fixed the remaining errors
 - Now it's onto making the BoxSim scene

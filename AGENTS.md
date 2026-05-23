@@ -57,57 +57,15 @@ Godot 4.7.beta2, Forward+, Jolt Physics, C# 14, net10.0
 
 - Solver architecture review by GPT-5.5, Opus 4.7, DeepSeek V4 Pro, and Kimi K2.6 is in `docs/chemistry/solver`
 
-- MainMenu.cs calls Initialize of Elements, AllSpecies, FormulaTable, and Nuclides
-```
-118 Elements: 1.42 ms
-6 Species and 9 Species Phases: 45.06 ms
-Formulas: 8.37 ms
-3558 Nuclides: 14.39 ms
-```
+- Solver debugging by DeepSeek V4 Pro and GPT-5.5 is in `docs/chemistry/solver_debug`
+- - DeepSeek V4 Pro: ended up making 474 mols of H2O ice
+- - GPT 5.5: got rid of liquids and solids, solution makes 100 mols of CO2 and 200 mols of H2
+- - My current implementation: got rid of liquids and solids, solution ends up mostly gaseous H2O with bits of CO2 and gaseous C
 
-- BoxSim.cs requirements:
-- - MultiMeshSpeciesPhase has one mesh for each species
-- - Phases are vertically stratified: gases, liquids, solids from top to bottom
-- - Within each phase, species phases go from left to right in arbitrary order
-- - Each mesh corresponding to a species phase is proportional to its volume
-- - Gases are the original color, liquids are 25% darker, solids are 50% darker
-- - Depth is always 100%
-- - BoxSim calls Volume.GetInfo, which returns whatever information BoxSim needs
-- - The SpeciesPhaseDropdown is populated
-- - You should be able to add an amount of species at a temperature
-- - ThermodynamicsLabel and ResourcesLabel are filled in according to the placeholder text in BoxSim.tscn
-- - Play, Pause, Step 1 Frame, and Clear Contents
-- - SparkCheck allows chemicals to react regardless of temperature
-
-- Right now Volume.Solve is propagating NaNs for some reason
-```
-UpdateResourcesLabel:
-CH4
-Gas 200 3.2085999999999997 4.8747694330232445
-O2
-Gas 100 3.1997999999999998 2.4373847165116223
-UpdateResourcesLabel:
-C
-Gas NaN NaN NaN
-Solid NaN NaN NaN
-CH4
-Gas NaN NaN NaN
-CO2
-Gas NaN NaN NaN
-H2
-Gas NaN NaN NaN
-H2O
-Gas NaN NaN NaN
-Liquid NaN NaN NaN
-Solid NaN NaN NaN
-O2
-Gas NaN NaN NaN
-```
-
-- DeepSeek V4 Pro was able to stop NaNs from appearing using a lot of conditioning, but the box is still making too much H2O (474 mols instead of 200)
-- - See `docs/chemistry/solver_debug/deepseek_v4_pro` `epm_nan_fix_journey.md` and `Volume.csgo`
-- GPT-5.5 did something else, which seemed to be correct. The solution now favors 100 mol CO2
-- - See `docs/chemistry/solver_debug/gpt_5_5` `water_overproduction_fix.md` and `Volume.csgo`
+- Questions for members of the Council:
+1. Check out `docs/chemistry/solver_debug_2` `cearun.txt` and `boxsim.txt`. I assume CEA's output is correct since, you know, NASA actually depends on the numbers. Can you explain what's going on and why CEA found that solution? Apart from lacking a CO species, what other simplifications in BoxSim lead to the equilibrium being wrong?
+2. Why is my solver trying to make gaseous carbon at 1000 K?
+3. I still feel that minoring out liquids and solids to stabilize J is a lazy fix. What, exactly, makes multi-phase equilibrium so much harder than gas-only? Does it make the problem non-convex? I know that CEA, STANJAN, etc. use an outer loop to turn condensed species on and off. Is this the most elegant, closest to real lifeway or is it for practical reasons?
 
 - Implied assumptions:
 - - There is one state for the entire box. All SpeciesPhases obey the same temperature and pressure from Volume
