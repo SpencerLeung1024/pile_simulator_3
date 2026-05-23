@@ -13,6 +13,7 @@ public class Volume : Inventory<SpeciesPhaseResource>
     public double T; // K
     public double P; // Pa
     public double UTarget; // J, conserved when guessing T
+    public bool spark; // If a spark exists in the volume, dissociation temperatures are ignored and dissociation has a minimum of Constants.DissociationThreshold per frame
     
     // Derived quantities:
     // Mass: kg
@@ -72,6 +73,11 @@ public class Volume : Inventory<SpeciesPhaseResource>
         }
     }
 
+    public void GetInfo() // Signature TBD
+    {
+        
+    }
+
     private void Dissociate()
     {
         // We may need to remove resources if they were fully dissociated, so we need a backward for loop
@@ -79,9 +85,13 @@ public class Volume : Inventory<SpeciesPhaseResource>
         {
             SpeciesPhaseResource resource = Resources[j];
             Species species = resource.SpeciesPhase.Species;
-            if (T > species.DissociationTemperature)
+            if (T > species.DissociationTemperature || spark)
             {
                 double k = Math.Exp(-species.DissociationActivationEnergy / (Constants.R * T)); // Arrhenius equation k = Ae^(-E_a / RT) with A = 1 / frame
+                if (spark)
+                {
+                    k = Math.Max(k, Constants.DissociationThreshold);
+                }
                 double n_dissociated = resource.n * k;
                 if (resource.n - n_dissociated < Constants.n_jMin)
                 {

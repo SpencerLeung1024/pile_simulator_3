@@ -2,6 +2,7 @@
 
 ## 2026-05-22: BoxSim v0.0?
 - DeepSeek V4 Pro fixed the remaining errors
+- Now it's onto making the BoxSim scene
 
 ## 2026-05-20: Only SolveReaction and ApplyHeat remaining
 - After days of staring at Wikipedia articles far from my area of expertise, I think it's near

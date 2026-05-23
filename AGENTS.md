@@ -57,14 +57,21 @@ Godot 4.7.beta2, Forward+, Jolt Physics, C# 14, net10.0
 
 - Solver architecture review by GPT-5.5, Opus 4.7, DeepSeek V4 Pro, and Kimi K2.6 is in `docs/chemistry/solver`
 
-- MainMenu.cs should do:
+- MainMenu.cs calls Initialize of Elements, AllSpecies, FormulaTable, and Nuclides
 
-```csharp
-Elements.Initialize();
-AllSpecies.Initialize();
-FormulaTable.Initialize();
-Nuclides.Initialize();
-```
+- BoxSim.cs requirements:
+- - MultiMeshSpeciesPhase has one mesh for each species
+- - Phases are vertically stratified: gases, liquids, solids from top to bottom
+- - Within each phase, species phases go from left to right in arbitrary order
+- - Each mesh corresponding to a species phase is proportional to its volume
+- - Gases are the original color, liquids are 25% darker, solids are 50% darker
+- - Depth is always 100%
+- - BoxSim calls Volume.GetInfo, which returns whatever information BoxSim needs
+- - The SpeciesPhaseDropdown is populated
+- - You should be able to add an amount of species at a temperature
+- - ThermodynamicsLabel and ResourcesLabel are filled in according to the placeholder text in BoxSim.tscn
+- - Play, Pause, Step 1 Frame, and Clear Contents
+- - SparkCheck allows chemicals to react regardless of temperature
 
 - Implied assumptions:
 - - There is one state for the entire box. All SpeciesPhases obey the same temperature and pressure from Volume

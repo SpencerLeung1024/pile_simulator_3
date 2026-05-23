@@ -2,5 +2,133 @@
 
 [ext_resource type="Script" uid="uid://df1tiyyp0n2pw" path="res://Scripts/BoxSim.cs" id="1_ifjut"]
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ifjut"]
+vertex_color_use_as_albedo = true
+
+[sub_resource type="BoxMesh" id="BoxMesh_bdxkw"]
+material = SubResource("StandardMaterial3D_ifjut")
+
+[sub_resource type="MultiMesh" id="MultiMesh_00eib"]
+use_colors = true
+instance_count = 1
+mesh = SubResource("BoxMesh_bdxkw")
+buffer = PackedFloat32Array(1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1)
+
 [node name="BoxSim" type="Node3D" unique_id=1491472761]
 script = ExtResource("1_ifjut")
+
+[node name="UI" type="Control" parent="." unique_id=977306495]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxTopLeft" type="VBoxContainer" parent="UI" unique_id=277459009]
+layout_mode = 1
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 310.0
+offset_bottom = 146.0
+
+[node name="SpeciesPhaseDropdown" type="OptionButton" parent="UI/VBoxTopLeft" unique_id=309491035]
+layout_mode = 2
+selected = 0
+allow_reselect = true
+item_count = 3
+popup/item_0/text = "H2"
+popup/item_0/id = 0
+popup/item_1/text = "C(gr)"
+popup/item_1/id = 1
+popup/item_2/text = "O2"
+popup/item_2/id = 2
+
+[node name="AmountLineEdit" type="LineEdit" parent="UI/VBoxTopLeft" unique_id=1144203347]
+layout_mode = 2
+placeholder_text = "Moles"
+
+[node name="TemperatureLineEdit" type="LineEdit" parent="UI/VBoxTopLeft" unique_id=688434082]
+layout_mode = 2
+placeholder_text = "Kelvin"
+
+[node name="AddSpeciesPhaseButton" type="Button" parent="UI/VBoxTopLeft" unique_id=821607044]
+layout_mode = 2
+text = "Add"
+
+[node name="ThermodynamicsLabel" type="RichTextLabel" parent="UI" unique_id=1926575453]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -194.0
+offset_right = 310.0
+offset_bottom = -10.0
+grow_vertical = 0
+text = "FPS: 42
+U: -12.3 MJ
+T: 456 K
+V: 1.00 m^3
+P: 357 kPa
+S: 357 kJ / K
+H = U - PV: -12.3 MJ
+G = H + TS: -12.3 MJ
+A = U + TS: -12.3 MJ"
+fit_content = true
+
+[node name="ResourcesLabel" type="RichTextLabel" parent="UI" unique_id=695665799]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -310.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 125.0
+grow_horizontal = 0
+bbcode_enabled = true
+text = "[color=#ffffff]O2[/color]
+gas: 203 mol, 1.72 kg, 807 L
+[color=#5f9fff]H2O[/color]
+gas: 13.7 mol, 196 g, 113 L
+liquid: 1.23 kmol, 83.7 kg, 19.2 L"
+fit_content = true
+
+[node name="HBoxBottom" type="HBoxContainer" parent="UI" unique_id=426755865]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -170.0
+offset_top = -50.0
+offset_right = 170.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="PlayButton" type="Button" parent="UI/HBoxBottom" unique_id=382290760]
+layout_mode = 2
+text = "Play"
+
+[node name="PauseButton" type="Button" parent="UI/HBoxBottom" unique_id=607919427]
+layout_mode = 2
+text = "Pause"
+
+[node name="StepButton" type="Button" parent="UI/HBoxBottom" unique_id=1404237425]
+layout_mode = 2
+text = "Step 1 Frame"
+
+[node name="ClearButton" type="Button" parent="UI/HBoxBottom" unique_id=191226276]
+layout_mode = 2
+text = "Clear Contents"
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1566697329]
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1643475192]
+transform = Transform3D(0.9238795, -0.14644663, 0.3535534, 0, 0.9238795, 0.38268346, -0.38268346, -0.3535534, 0.85355335, 0.7, 0.7, 2)
+
+[node name="MultiMeshSpeciesPhase" type="MultiMeshInstance3D" parent="." unique_id=1211610044]
+multimesh = SubResource("MultiMesh_00eib")
