@@ -25,8 +25,12 @@ public abstract class Inventory<T>
 public class NuclideInventory : Inventory<NuclideResource>
 {
     // Resources: the nuclides in this inventory, and their amounts in mol
-    // Mass: kg
     // Volume: m^3
+
+    // Derived quantities:
+    // Mass: kg
+    // UsedVolume: m^3
+    // FreeVolume: m^3, has a getter: Volume - UsedVolume
 
     private double GetVolumeOfResource(NuclideResource resource)
     {
@@ -102,6 +106,27 @@ public class NuclideInventory : Inventory<NuclideResource>
 public class ItemInventory : Inventory<ItemResource>
 {
     // Resources: the items in this inventory, and their amounts in count
-    // Mass: kg
     // Volume: m^3
+
+    // Derived quantities:
+    // Mass: kg
+    // UsedVolume: m^3
+    // FreeVolume: m^3, has a getter: Volume - UsedVolume
+
+    // Just make it compile first
+    protected override void DeriveQuantities()
+    {
+        Mass = 0.0;
+        UsedVolume = 0.0;
+    }
+
+    public override bool CanAdd(ItemResource resource)
+    {
+        return false;
+    }
+
+    public override bool MaybeAdd(ItemResource resource)
+    {
+        return false;
+    }
 }

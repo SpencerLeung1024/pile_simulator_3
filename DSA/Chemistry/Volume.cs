@@ -231,9 +231,12 @@ public class Volume : Inventory<SpeciesPhaseResource>
             // The library might not realize that diag(vec_n) is a diagonal matrix and try to do rectangle @ square @ rectangle.T, which would be wasteful
             // So we will fold diag(vec_n) into a matrix ourselves
             // Unfortunately there isn't a way to do (a, s) * s = (a, s)
-            // We will have to do our own broadcast of vec_n to do pointwise multiplication (a, s) * (a, s) = (a, s)
-            Matrix<double> broadcastedvec_n = Matrix<double>.Build.DenseOfRows(Enumerable.Repeat(vec_n, a)); // (a, s)
-            Matrix<double> viewWithvec_n = view.PointwiseMultiply(broadcastedvec_n); // (a, s) * (a, s) = (a, s)
+            // We will have to assemble it row by row
+            Matrix<double> viewWithvec_n = Matrix<double>.Build.Dense(a, s);
+            for (int i = 0; i < a; i++)
+            {
+                viewWithvec_n.SetRow(i, view.Row(i).PointwiseMultiply(vec_n));
+            }
             Matrix<double> Q = viewWithvec_n * view.Transpose(); // (a, s) * (s, a) = (a, a)
             // Build quadrant D
             // D_im = sum over j in phase m of n_ij * x_j
