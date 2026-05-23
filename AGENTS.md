@@ -79,6 +79,33 @@ Formulas: 8.37 ms
 - - Play, Pause, Step 1 Frame, and Clear Contents
 - - SparkCheck allows chemicals to react regardless of temperature
 
+- Right now Volume.Solve is propagating NaNs for some reason
+```
+UpdateResourcesLabel:
+CH4
+Gas 200 3.2085999999999997 4.8747694330232445
+O2
+Gas 100 3.1997999999999998 2.4373847165116223
+UpdateResourcesLabel:
+C
+Gas NaN NaN NaN
+Solid NaN NaN NaN
+CH4
+Gas NaN NaN NaN
+CO2
+Gas NaN NaN NaN
+H2
+Gas NaN NaN NaN
+H2O
+Gas NaN NaN NaN
+Liquid NaN NaN NaN
+Solid NaN NaN NaN
+O2
+Gas NaN NaN NaN
+```
+
+- DeepSeek V4 Pro was able to stop NaNs from appearing using a lot of conditioning, but the box is still making too much H2O (474 mols instead of 200)
+
 - Implied assumptions:
 - - There is one state for the entire box. All SpeciesPhases obey the same temperature and pressure from Volume
 - - The equilibrium of the reaction assumes ideal gases, ideal liquid solutions, and ideal solid solutions

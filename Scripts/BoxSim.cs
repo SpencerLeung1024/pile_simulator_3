@@ -293,7 +293,7 @@ public partial class BoxSim : Node3D
 			SpeciesPhase = AllSpeciesPhases.nameToPhase["O2"],
 			n = 100
 		});
-		_volume.UTarget = 1e8;
+		_volume.UTarget = _volume.U;
 
 		UpdateUI();
 	}
