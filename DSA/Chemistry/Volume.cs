@@ -73,9 +73,30 @@ public class Volume : Inventory<SpeciesPhaseResource>
         }
     }
 
-    public void GetInfo() // Signature TBD
+    public VolumeDisplayInfo GetInfo()
     {
-        
+        var info = new VolumeDisplayInfo
+        {
+            T = T,
+            P = P,
+            V = Volume,
+            U = U,
+            S = S,
+            C_v = C_v,
+            Resources = new List<ResourceDisplayEntry>()
+        };
+        foreach (SpeciesPhaseResource resource in Resources)
+        {
+            double v = resource.SpeciesPhase.EquationOfState.Getv(T, P);
+            info.Resources.Add(new ResourceDisplayEntry
+            {
+                SpeciesPhase = resource.SpeciesPhase,
+                n = resource.n,
+                Mass = resource.SpeciesPhase.Species.MolarMass * resource.n,
+                PhaseVolume = v * resource.n
+            });
+        }
+        return info;
     }
 
     private void Dissociate()
@@ -495,4 +516,23 @@ public class Volume : Inventory<SpeciesPhaseResource>
     {
         return false; // Stub: pumps not implemented yet
     }
+}
+
+public class VolumeDisplayInfo
+{
+    public double T;
+    public double P;
+    public double V;
+    public double U;
+    public double S;
+    public double C_v;
+    public List<ResourceDisplayEntry> Resources;
+}
+
+public class ResourceDisplayEntry
+{
+    public SpeciesPhase SpeciesPhase;
+    public double n;
+    public double Mass;
+    public double PhaseVolume;
 }
