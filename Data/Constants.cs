@@ -52,6 +52,30 @@ public class Constants
         {-24, "y"}
     };
 
+    public static readonly Dictionary<string, string> fixKgDict = new Dictionary<string, string>
+    {
+        //{"Ykg", null}, // 1e27 g can't be represented
+        {"Zkg", "Yg"},
+        {"Ekg", "Zg"},
+        {"Pkg", "Eg"},
+        {"Tkg", "Pg"},
+        {"Gkg", "Tg"},
+        {"Mkg", "Gg"},
+        {"kkg", "Mg"},
+        //{"hkg", null}, // 1e5 g
+        //{"dakg", null} // 1e4 g
+        {"dkg", "hg"},
+        {"ckg", "dag"},
+        {"mkg", "g"},
+        {"ukg", "mg"},
+        {"nkg", "ug"},
+        {"pkg", "ng"},
+        {"fkg", "pg"},
+        {"akg", "fg"},
+        {"zkg", "ag"},
+        {"ykg", "zg"}
+    };
+
     // Physics
 
     // speed of light
@@ -154,6 +178,8 @@ public class Constants
     // SolveReactions
     public const uint MaxReactionSteps = 20;
     public const double N_mMin = 1e-6; // mol, N_m for phase m is clamped to be > this after every Newton step
+    public const double V_mMin = 1e-6; // m^3, V_m is not used in the solver but is used for display
+    public const double LambdaMaxJump = 1e1; // Maximum change in an element's element potential per step
     public const double H_iTolerance = 1e-6; // mol element i unused, an early exit condition for SolveReactions
     public const double Z_mTolerance = 1e-6; // mole fraction of phase m away from 1, an early exit condition for SolveReactions
     public const double n_jMin = 1e-6; // mol, a species will not be realized if its calculated amount is < this
@@ -184,27 +210,47 @@ public class Constants
     public static string FormatUnit(double value, uint figures, string unit)
     {
         string valueStr;
-        string prefix = "";
+        string prefix;
+        string prefixAndUnit;
         if (value == 0.0) // Can't log 0
         {
-            valueStr = "0." + new string('0', (int)figures - 1);
+            valueStr = "0";
+            prefixAndUnit = unit;
         }
         else
         {
             int exponent = (int)(Math.Floor(Math.Log10(Math.Abs(value)) / 3) * 3); // Only use the kilo prefixes
-            if (exponent <= 24 && exponent >= -24)
+            prefix = exponentToPrefix.GetValueOrDefault(exponent, "");
+            if (prefix != "")
             {
                 double rescaledValue = value / Math.Pow(10, exponent);
                 valueStr = rescaledValue.ToString($"G{figures}");
-                prefix = exponentToPrefix.GetValueOrDefault(exponent, "");
+                if (unit == "kg")
+                {
+                    string fixedUnit = fixKgDict.GetValueOrDefault(prefix + unit, "");
+                    if (fixedUnit != "")
+                    {
+                        prefixAndUnit = fixedUnit;
+                    }
+                    else
+                    {
+                        // Just use scientific notation and no prefix
+                        valueStr = value.ToString($"G{figures}");
+                        prefixAndUnit = unit;
+                    }
+                }
+                else
+                {
+                    prefixAndUnit = prefix + unit;
+                }
             }
             else
             {
-                // Just use scientific notation and no prefix
                 valueStr = value.ToString($"G{figures}");
+                prefixAndUnit = unit;
             }
         }
-        return $"{valueStr} {prefix}{unit}";
+        return $"{valueStr} {prefixAndUnit}";
     }
 
     public static double MassToEnergy(double mass)

@@ -2,9 +2,12 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using MathNet.Numerics.LinearAlgebra;
 
 public partial class BoxSim : Node3D
 {
+	const bool VERBOSE = false;
+
 	[Export] private MultiMeshInstance3D _multiMeshSpeciesPhase;
 
 	[Export] private OptionButton _speciesPhaseDropdown;
@@ -23,6 +26,7 @@ public partial class BoxSim : Node3D
 	[Export] private CheckButton _sparkCheck;
 
 	[Export] private Label _FPSLabel;
+	[Export] private Button _dumpDebugButton;
 
 	private Volume _volume = new Volume(1.0);
 	private bool _isPlaying = false;
@@ -32,14 +36,23 @@ public partial class BoxSim : Node3D
 	public static Dictionary<string, string> speciesToHex = new Dictionary<string, string>
 	{
 		{"H2", "#bf3f3f"},
-		{"C", "#3f3f3f"},
+		{"C", "#1f1f1f"},
 		{"O2", "#ffffff"},
 		{"Fe", "#5f5f5f"},
 		{"CH4", "#ff5f5f"},
 		{"H2O", "#7fbfff"},
 		{"CO2", "#7f7f7f"},
+		{"C2H5OH", "#7f5f3f"},
 		{"Fe2O3", "#ff9f7f"}
 	};
+
+	private void DumpDebug()
+	{
+		GD.Print("Thermodynamics:");
+		GD.Print(_thermodynamicsLabel.Text);
+		GD.Print("Resources:");
+		GD.Print(_resourcesLabel.Text);
+	}
 
 	private void UpdateThermodynamicsLabel(List<ResourceDisplayEntry> info)
 	{
@@ -48,6 +61,7 @@ public partial class BoxSim : Node3D
 		double A = _volume.U - _volume.T * _volume.S;
 
 		_thermodynamicsLabel.Text =
+			$"Mass: {Constants.FormatUnit(_volume.Mass, 3, "kg")}\n" +
 			$"U: {Constants.FormatUnit(_volume.U, 3, "J")}\n" +
 			$"T: {Math.Round(_volume.T)} K\n" + // Always show as Kelvin with no SI prefix
 			$"V: {Constants.FormatUnit(_volume.Volume * 1e3, 3, "L")}\n" + // The SI unit is m^3 but "mm^3" is actually 1e-9 m^3, so show L as the unit
@@ -79,7 +93,7 @@ public partial class BoxSim : Node3D
 			foreach (var entry in group.OrderBy(e => (int)e.SpeciesPhase.Phase))
 			{
 				sb.AppendLine(
-					$"{entry.SpeciesPhase.Phase.ToString().ToLower()}: {Constants.FormatUnit(entry.n, 3, "mol")}, {Constants.FormatUnit(entry.Mass, 3, "kg")}, {Constants.FormatUnit(entry.ResourceVolume * 1e3, 3, "L")}");
+					$"{entry.SpeciesPhase.Phase.ToString().ToLower()}: {Constants.FormatUnit(entry.n, 3, "mol")}, {Constants.FormatUnit(entry.ResourceMass, 3, "kg")}, {Constants.FormatUnit(entry.ResourceVolume * 1e3, 3, "L")}");
 			}
 		}
 		_resourcesLabel.Text = sb.ToString().Replace("\r\n", "\n");
@@ -95,39 +109,18 @@ public partial class BoxSim : Node3D
 			return;
 		}
 
-		const float minMolarVolume = 1e-4f;
 		const float boxSize = 1.0f;
 		const float boxHalf = boxSize / 2.0f;
 
-		var phaseVolumes = new double[3];
-		var displayVolumes = new List<(ResourceDisplayEntry entry, float vol)>();
-		double totalVol = 0.0;
+		Vector<double> phaseVolumes = _volume.all_vec_V;
+		double totalVol = phaseVolumes.Sum();
 
-		foreach (var entry in info)
-		{
-			float v = (float)Math.Max(entry.ResourceVolume / entry.n, minMolarVolume);
-			float vol = v * (float)entry.n;
-			int p = (int)entry.SpeciesPhase.Phase;
-			phaseVolumes[p] += vol;
-			totalVol += vol;
-			displayVolumes.Add((entry, vol));
-		}
-
-		if (totalVol <= 0.0)
-		{
-			totalVol = 1.0;
-			for (int m = 0; m < 3; m++)
-			{
-				phaseVolumes[m] = 1.0 / 3.0;
-			}
-		}
-
-		var displayVolumesWithIndex = displayVolumes
-			.Select((dv, idx) => (
-				entry: dv.entry,
-				vol: dv.vol,
-				idx: idx,
-				phase: dv.entry.SpeciesPhase.Phase
+		var displayVolumesWithIndex = info
+			.Select((entry, idx) => (
+				species: entry.SpeciesPhase.Species,
+				vol: entry.ResourceVolume,
+				instanceIndex: idx,
+				phase: entry.SpeciesPhase.Phase
 			))
 			.ToList();
 
@@ -147,7 +140,7 @@ public partial class BoxSim : Node3D
 				.ToList();
 
 			float xLeft = -boxHalf;
-			foreach (var (entry, vol, instanceIndex, _) in phaseEntries)
+			foreach (var (species, vol, instanceIndex, _) in phaseEntries)
 			{
 				float width = (float)(vol / phaseVolumes[m]) * boxSize;
 				if (width < 0.001f)
@@ -163,13 +156,13 @@ public partial class BoxSim : Node3D
 
 				_multiMeshSpeciesPhase.Multimesh.SetInstanceTransform(instanceIndex, transform);
 
-				string hex = speciesToHex.GetValueOrDefault(entry.SpeciesPhase.Species.Name, "#ffffff");
+				string hex = speciesToHex.GetValueOrDefault(species.Name, "#ffffff");
 				var color = new Color(hex);
-				if (entry.SpeciesPhase.Phase == Phase.Liquid)
+				if (phase == Phase.Liquid)
 				{
 					color = color.Lerp(new Color("#000000"), 0.25f);
 				}
-				else if (entry.SpeciesPhase.Phase == Phase.Solid)
+				else if (phase == Phase.Solid)
 				{
 					color = color.Lerp(new Color("#000000"), 0.5f);
 				}
@@ -188,10 +181,10 @@ public partial class BoxSim : Node3D
 		UpdateThermodynamicsLabel(info);
 		UpdateResourcesLabel(info);
 		UpdateMultiMesh(info);
-		GD.Print("Thermodynamics:");
-		GD.Print(_thermodynamicsLabel.Text);
-		GD.Print("Resources:");
-		GD.Print(_resourcesLabel.Text);
+		if (VERBOSE)
+		{
+			DumpDebug();
+		}
 	}
 
 	private void OnAddSpeciesPhase()
@@ -297,6 +290,8 @@ public partial class BoxSim : Node3D
 		_clearButton.Pressed += OnClear;
 		_sparkCheck.Toggled += OnSparkToggled;
 
+		_dumpDebugButton.Pressed += DumpDebug;
+
 		// Initial condition
 		_volume.MaybeAdd(new SpeciesPhaseResource
 		{
@@ -309,6 +304,11 @@ public partial class BoxSim : Node3D
 			n = 100
 		});
 		/*
+		_volume.MaybeAdd(new SpeciesPhaseResource
+		{
+			SpeciesPhase = AllSpeciesPhases.nameToPhase["C2H5OH"],
+			n = 50
+		});
 		_volume.MaybeAdd(new SpeciesPhaseResource
 		{
 			SpeciesPhase = AllSpeciesPhases.nameToPhase["Fe2O3(cr)"],
@@ -325,11 +325,6 @@ public partial class BoxSim : Node3D
 			n = 25
 		});
 		*/
-		_volume.MaybeAdd(new SpeciesPhaseResource
-		{
-			SpeciesPhase = AllSpeciesPhases.nameToPhase["C2H5OH"],
-			n = 50
-		});
 		_volume.UTarget = _volume.U;
 
 		UpdateUI();

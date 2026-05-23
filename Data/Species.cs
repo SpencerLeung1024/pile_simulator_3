@@ -176,7 +176,7 @@ public static class AllSpecies
             // In a system with effectively zero C(gr), liquid and solid are both entirely H2O, J is near singular, and the solver breaks
 
             // Add a substance that is know to prefer a liquid phase, and has no solid phase in the dataset
-            "C2H5OH", // "C2H5OH" gaseous ethanol (line 3153), "C2H5OH(L)" liquid ethanol (line 15532)
+            //"C2H5OH", // "C2H5OH" gaseous ethanol (line 3153), "C2H5OH(L)" liquid ethanol (line 15532)
 
             // Nope, J didn't budge. H2O > C2H5OH
             // Maybe try something to suck up the oxygen into a solid
