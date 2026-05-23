@@ -8,6 +8,10 @@ public class Constants
     public const double c = 2.99792458e8; // m / s
     // gravitational constant
     public const double G = 6.67430e-11; // m^3 / (kg * s^2)
+    // Stefan-Boltzmann constant
+    public const double sigma = 5.670374419e-8; // W / (m^2 K^4)
+    // cosmic microwave background temperature
+    public const double CMBTemperature = 2.72548; // K
 
     // Chemistry
 

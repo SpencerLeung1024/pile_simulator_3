@@ -20,7 +20,8 @@ Godot 4.7.beta2, Forward+, Jolt Physics, C# 14, net10.0
 - DSA: Anything not bound to a node
 - - Voxel: Asteroid generator and octree
 - - Gravity: "Physics" gravity (forces applied on nearby rigid bodies) and Keplerian orbits
-- - Chemistry: State functions, equations of state, simulator for what happens inside a Volume, and devices with specific inputs and outputs
+- - Chemistry: State functions, equations of state, simulator for what happens inside a Volume
+- - Devices: Things that interact with Networks and Volumes, with various inputs and outputs
 - Scripts: Anything bound to a Godot node, has _Ready and _Process, etc.
 - Scenes: .tscn files
 - docs: .md files
@@ -28,12 +29,8 @@ Godot 4.7.beta2, Forward+, Jolt Physics, C# 14, net10.0
 
 ### Scenes
 
-Only World exists right now
-
-- MainMenu: Lets you go to World, SolarSystem, Shop, or BoxSim
+- MainMenu: Lets you go to World or BoxSim
 - World: An Asteroid that you can freecam around
-- SolarSystem: Planets and asteroids are shown in orbits
-- Shop: Buy and sell Resources and Items. Location dependence is waiting on the fact that there is no "you" and no "your location"
 - BoxSim: A Volume and a test to see if the chemical simulation is working
 
 ## Guidelines
@@ -86,7 +83,7 @@ Nuclides.Initialize();
 - Research how mineral and chemical processing works in real life
 - Figure out how to translate that into game mechanics
 - Implement a solar system and orbit transfers
-- Make the shop depend on your position
+- Make a shop where you can buy and sell Resources and Items depending on your World location
 - Give the player and built structures inventories
 - Buildable structures
 - Archive the BoxSim (Volumes will be used in the World)

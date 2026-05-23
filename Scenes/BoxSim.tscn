@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c4e2xn8mnamxt"]
+
+[ext_resource type="Script" uid="uid://df1tiyyp0n2pw" path="res://Scripts/BoxSim.cs" id="1_ifjut"]
+
+[node name="BoxSim" type="Node3D" unique_id=1491472761]
+script = ExtResource("1_ifjut")

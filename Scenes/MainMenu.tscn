@@ -1,0 +1,104 @@
+[gd_scene format=3 uid="uid://cjxu2ldyxuycg"]
+
+[ext_resource type="Script" uid="uid://ddgpexflwgjwg" path="res://Scripts/MainMenu.cs" id="1_tt5f1"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_tt5f1"]
+font_size = 32
+
+[sub_resource type="LabelSettings" id="LabelSettings_853f1"]
+font_size = 24
+
+[node name="MainMenu" type="Node3D" unique_id=465784791 node_paths=PackedStringArray("_worldButton", "_solarSystemButton", "_shopButton", "_boxSimButton")]
+script = ExtResource("1_tt5f1")
+_worldButton = NodePath("UI/WorldButton")
+_solarSystemButton = NodePath("UI/SolarSystemButton")
+_shopButton = NodePath("UI/ShopButton")
+_boxSimButton = NodePath("UI/BoxSimButton")
+
+[node name="UI" type="Control" parent="." unique_id=94791080]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TitleLabel" type="Label" parent="UI" unique_id=212029003]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.2
+anchor_right = 0.5
+anchor_bottom = 0.2
+grow_horizontal = 2
+grow_vertical = 2
+text = "Pile Simulator 3"
+label_settings = SubResource("LabelSettings_tt5f1")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="UI" unique_id=673422047]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.28
+anchor_right = 0.5
+anchor_bottom = 0.28
+grow_horizontal = 2
+grow_vertical = 2
+text = "Now with 200% more piles!"
+label_settings = SubResource("LabelSettings_853f1")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="WorldButton" type="Button" parent="UI" unique_id=2037485930]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.45
+anchor_right = 0.5
+anchor_bottom = 0.45
+offset_right = 8.0
+offset_bottom = 8.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "World"
+
+[node name="SolarSystemButton" type="Button" parent="UI" unique_id=829135141]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.52
+anchor_right = 0.5
+anchor_bottom = 0.52
+offset_right = 8.0
+offset_bottom = 8.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Buy the Solar System DLC"
+
+[node name="ShopButton" type="Button" parent="UI" unique_id=897369699]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.59
+anchor_right = 0.5
+anchor_bottom = 0.59
+offset_right = 8.0
+offset_bottom = 8.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Buy the Shop DLC"
+
+[node name="BoxSimButton" type="Button" parent="UI" unique_id=1697959789]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.66
+anchor_right = 0.5
+anchor_bottom = 0.66
+offset_right = 8.0
+offset_bottom = 8.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "BoxSim"
