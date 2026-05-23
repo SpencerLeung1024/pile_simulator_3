@@ -58,6 +58,12 @@ Godot 4.7.beta2, Forward+, Jolt Physics, C# 14, net10.0
 - Solver architecture review by GPT-5.5, Opus 4.7, DeepSeek V4 Pro, and Kimi K2.6 is in `docs/chemistry/solver`
 
 - MainMenu.cs calls Initialize of Elements, AllSpecies, FormulaTable, and Nuclides
+```
+118 Elements: 1.42 ms
+6 Species and 9 Species Phases: 45.06 ms
+Formulas: 8.37 ms
+3558 Nuclides: 14.39 ms
+```
 
 - BoxSim.cs requirements:
 - - MultiMeshSpeciesPhase has one mesh for each species

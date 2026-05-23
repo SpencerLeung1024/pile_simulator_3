@@ -115,8 +115,8 @@ public static class NASA9Loader
                 string intervalLine = lines[i];
                 i++;
 
-                double tLow = double.Parse(intervalLine.Substring(0, 10).Trim());
-                double tHigh = double.Parse(intervalLine.Substring(10, 10).Trim());
+                double tLow = double.Parse(intervalLine.Substring(1, 10).Trim());
+                double tHigh = double.Parse(intervalLine.Substring(11, 10).Trim());
 
                 if (i >= lines.Length) break;
                 string coeffLine1 = lines[i];
