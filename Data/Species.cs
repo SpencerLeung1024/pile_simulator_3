@@ -155,7 +155,7 @@ public static class AllSpecies
     public static void Initialize()
     {
         // 2026-05-19: Our only data source is the NASA Glenn Coefficients at `DSA/Data/thermo.inp`
-        string path = "DSA/Data/thermo.inp";
+        string path = "Data/thermo.inp";
         // subset is a list of baseName
         // See GetBaseName and BuildSpecies in NASA9Loader for details
         List<string> subset = new List<string>()

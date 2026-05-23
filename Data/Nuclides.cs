@@ -89,7 +89,7 @@ public static class Nuclides
 
     public static void Initialize()
     {
-        NuclideDataLoader.Load("DSA/Data/mass_1.mas20.txt", "DSA/Data/nubase_4.mas20.txt");
+        NuclideDataLoader.Load("Data/mass_1.mas20.txt", "Data/nubase_4.mas20.txt");
     }
 }
 

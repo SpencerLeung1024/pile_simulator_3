@@ -90,7 +90,7 @@ grow_horizontal = 0
 bbcode_enabled = true
 text = "[color=#ffffff]O2[/color]
 gas: 203 mol, 1.72 kg, 807 L
-[color=#5f9fff]H2O[/color]
+[color=#7fbfff]H2O[/color]
 gas: 13.7 mol, 196 g, 113 L
 liquid: 1.23 kmol, 83.7 kg, 19.2 L"
 fit_content = true
@@ -124,6 +124,10 @@ text = "Step 1 Frame"
 [node name="ClearButton" type="Button" parent="UI/HBoxBottom" unique_id=191226276]
 layout_mode = 2
 text = "Clear Contents"
+
+[node name="SparkCheck" type="CheckButton" parent="UI/HBoxBottom" unique_id=1004553518]
+layout_mode = 2
+text = "Spark"
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1566697329]
 
