@@ -21,7 +21,7 @@ public partial class BoxSim : Node3D
 	[Export] private Button _clearButton;
 	[Export] private CheckButton _sparkCheck;
 
-	private Volume _volume = new Volume(1);
+	private Volume _volume = new Volume(1.0);
 	private bool _isPlaying = false;
 
 	public static Dictionary<string, string> speciesToHexCode = new Dictionary<string, string>
@@ -33,41 +33,6 @@ public partial class BoxSim : Node3D
 		{"H2O", "7fbfff"},
 		{"CO2", "7f7f7f"}
 	};
-
-	public override void _Ready()
-	{
-		foreach (SpeciesPhase sp in AllSpeciesPhases.list)
-		{
-			_speciesPhaseDropdown.AddItem($"{sp.Species.Name} ({sp.Name})");
-		}
-		_speciesPhaseDropdown.Selected = 0;
-
-		_addSpeciesPhaseButton.Pressed += OnAddSpeciesPhase;
-		_playButton.Pressed += OnPlay;
-		_pauseButton.Pressed += OnPause;
-		_stepButton.Pressed += OnStep;
-		_clearButton.Pressed += OnClear;
-		_sparkCheck.Toggled += OnSparkToggled;
-
-		UpdateUI();
-	}
-
-	public override void _Process(double delta)
-	{
-		if (_isPlaying)
-		{
-			_volume.Solve();
-		}
-		UpdateUI();
-	}
-
-	private void UpdateUI()
-	{
-		List<ResourceDisplayEntry> info = _volume.GetInfo();
-		UpdateThermodynamicsLabel(info);
-		UpdateResourcesLabel(info);
-		UpdateMultiMesh(info);
-	}
 
 	private void UpdateThermodynamicsLabel(List<ResourceDisplayEntry> info)
 	{
@@ -90,6 +55,8 @@ public partial class BoxSim : Node3D
 
 	private void UpdateResourcesLabel(List<ResourceDisplayEntry> info)
 	{
+		GD.Print("UpdateResourcesLabel:");
+
 		if (info.Count == 0)
 		{
 			_resourcesLabel.Text = "";
@@ -103,6 +70,7 @@ public partial class BoxSim : Node3D
 		System.Text.StringBuilder sb = new System.Text.StringBuilder();
 		foreach (var group in speciesGroups)
 		{
+			GD.Print($"{group.Key.Name}");
 			string hex = speciesToHexCode.GetValueOrDefault(group.Key.Name, "ffffff");
 			sb.AppendLine($"[color=#{hex}]{group.Key.Name}[/color]");
 
@@ -110,6 +78,7 @@ public partial class BoxSim : Node3D
 			{
 				sb.AppendLine(
 					$"{entry.SpeciesPhase.Phase.ToString().ToLower()}: {Constants.FormatUnit(entry.n, 3, "mol")}, {Constants.FormatUnit(entry.Mass, 3, "kg")}, {Constants.FormatUnit(entry.ResourceVolume * 1e3, 3, "L")}");
+				GD.Print($"{entry.SpeciesPhase.Phase.ToString()} {entry.n} {entry.Mass} {entry.ResourceVolume}");
 			}
 		}
 		_resourcesLabel.Text = sb.ToString().TrimEnd();
@@ -212,6 +181,14 @@ public partial class BoxSim : Node3D
 		}
 	}
 
+	private void UpdateUI()
+	{
+		List<ResourceDisplayEntry> info = _volume.GetInfo();
+		UpdateThermodynamicsLabel(info);
+		UpdateResourcesLabel(info);
+		UpdateMultiMesh(info);
+	}
+
 	private void OnAddSpeciesPhase()
 	{
 		int index = _speciesPhaseDropdown.Selected;
@@ -247,17 +224,22 @@ public partial class BoxSim : Node3D
 		double addedU = resource.n * resource.SpeciesPhase.EquationOfState.GetU(addedT, resource.SpeciesPhase.EquationOfState.Getv(addedT, _volume.P));
 		_volume.UTarget += addedU;
 
+		_volume.Solve();
 		UpdateUI();
 	}
 
 	private void OnPlay()
 	{
 		_isPlaying = true;
+		_playButton.Disabled = true;
+		_pauseButton.Disabled = false;
 	}
 
 	private void OnPause()
 	{
 		_isPlaying = false;
+		_playButton.Disabled = false;
+		_pauseButton.Disabled = true;
 	}
 
 	private void OnStep()
@@ -279,5 +261,50 @@ public partial class BoxSim : Node3D
 	private void OnSparkToggled(bool toggledOn)
 	{
 		_volume.spark = toggledOn;
+	}
+
+	// Called when the node enters the scene tree for the first time.
+	public override void _Ready()
+	{
+		_playButton.Disabled = _isPlaying;
+		_pauseButton.Disabled = !_isPlaying;
+
+		foreach (SpeciesPhase sp in AllSpeciesPhases.list)
+		{
+			_speciesPhaseDropdown.AddItem($"{sp.Species.Name} ({sp.Name})");
+		}
+		_speciesPhaseDropdown.Selected = 0;
+
+		_addSpeciesPhaseButton.Pressed += OnAddSpeciesPhase;
+		_playButton.Pressed += OnPlay;
+		_pauseButton.Pressed += OnPause;
+		_stepButton.Pressed += OnStep;
+		_clearButton.Pressed += OnClear;
+		_sparkCheck.Toggled += OnSparkToggled;
+
+		// Initial condition
+		_volume.MaybeAdd(new SpeciesPhaseResource
+		{
+			SpeciesPhase = AllSpeciesPhases.nameToPhase["CH4"],
+			n = 200
+		});
+		_volume.MaybeAdd(new SpeciesPhaseResource
+		{
+			SpeciesPhase = AllSpeciesPhases.nameToPhase["O2"],
+			n = 100
+		});
+		_volume.UTarget = 1e8;
+
+		UpdateUI();
+	}
+
+	// Called every frame. 'delta' is the elapsed time since the previous frame.
+	public override void _Process(double delta)
+	{
+		if (_isPlaying)
+		{
+			_volume.Solve();
+			UpdateUI();
+		}
 	}
 }

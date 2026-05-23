@@ -16,13 +16,13 @@ public class Species
     public List<SpeciesPhase> Phases;
 
     // Derived quantities
-    //public double MolarMass { get { return Formula.Sum(kv => kv.Key.A_r * kv.Value); } } // kg / mol
+    //public double MolarMass { get { return Formula.Sum(kv => kv.Key.A_r * 1e-3 * kv.Value); } } // kg / mol
     public double MolarMass; // Doing a sum every time is expensive so determine this value at construction
     public double DissociationActivationEnergy; // J / mol, unscientific, used in an Arrhenius equation
 
     private void DeriveQuantities()
     {
-        MolarMass = Formula.Sum(kv => kv.Key.A_r * kv.Value);
+        MolarMass = Formula.Sum(kv => kv.Key.A_r * 1e-3 * kv.Value);
         DissociationActivationEnergy = -Math.Log(Constants.DissociationThreshold) * Constants.R * DissociationTemperature;
     }
 

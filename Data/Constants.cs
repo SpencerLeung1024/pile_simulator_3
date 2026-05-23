@@ -191,12 +191,12 @@ public class Constants
         }
         else
         {
-            int exponent = (int)(Math.Floor(Math.Log10(Math.Abs(value))) / 3); // Only use the kilo prefixes
+            int exponent = (int)(Math.Floor(Math.Log10(Math.Abs(value)) / 3) * 3); // Only use the kilo prefixes
             if (exponent <= 24 && exponent >= -24)
             {
                 double rescaledValue = value / Math.Pow(10, exponent);
                 valueStr = rescaledValue.ToString($"G{figures}");
-                prefix = exponentToPrefix[exponent];
+                prefix = exponentToPrefix.GetValueOrDefault(exponent, "");
             }
             else
             {
