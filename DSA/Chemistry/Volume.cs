@@ -49,6 +49,11 @@ public class Volume : Inventory<SpeciesPhaseResource>
     {
         Resources = new List<SpeciesPhaseResource>();
         this.Volume = volume;
+        //this.T = Constants.Tmin;
+        //this.P = Constants.Pmin;
+        // The minimum values cause massive instabilities
+        this.T = Constants.NISTNormalTemperature;
+        this.P = Constants.bar;
         speciesToResources = new Dictionary<Species, List<SpeciesPhaseResource>>();
         speciesPhaseToResource = new Dictionary<SpeciesPhase, SpeciesPhaseResource>();
         freeElements = new Dictionary<Element, double>();

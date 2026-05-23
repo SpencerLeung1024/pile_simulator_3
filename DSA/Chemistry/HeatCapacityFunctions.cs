@@ -1,3 +1,4 @@
+using Godot;
 using System;
 using System.Collections.Generic;
 
@@ -45,18 +46,21 @@ public abstract class MultiTemperatureFunction: HeatCapacityFunction
 
     protected double[] Getvec_a(double T, bool AllowOutOfRange = true)
     {
-        if (T < TemperatureBoundaries[0] && !AllowOutOfRange)
+        if (!AllowOutOfRange)
         {
-            throw new ArgumentOutOfRangeException($"Temperature {T} is below minimum temperature {TemperatureBoundaries[0]}");
+            if (T < TemperatureBoundaries[0])
+            {
+                throw new ArgumentOutOfRangeException($"Temperature {T} is below minimum temperature {TemperatureBoundaries[0]}");
+            }
+            else if (T > TemperatureBoundaries[TemperatureBoundaries.Length - 1])
+            {
+                throw new ArgumentOutOfRangeException($"Temperature {T} is above maximum temperature {TemperatureBoundaries[TemperatureBoundaries.Length - 1]}");
+            }
         }
         int a_index = 0;
-        while (a_index < TemperatureBoundaries.Length - 1 && T > TemperatureBoundaries[a_index+1])
+        while (a_index < all_vec_a.Count - 1 && T > TemperatureBoundaries[a_index+1])
         {
             a_index++;
-        }
-        if (T > TemperatureBoundaries[TemperatureBoundaries.Length - 1] && !AllowOutOfRange)
-        {
-            throw new ArgumentOutOfRangeException($"Temperature {T} is above maximum temperature {TemperatureBoundaries[TemperatureBoundaries.Length - 1]}");
         }
         return all_vec_a[a_index];
     }
