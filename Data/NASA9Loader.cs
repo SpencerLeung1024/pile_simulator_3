@@ -216,13 +216,7 @@ public static class NASA9Loader
 			var phases = new List<SpeciesPhase>();
 			foreach (var entry in entriesInGroup)
 			{
-				Phase phase = entry.PhaseCode switch
-				{
-					0 => Phase.Gas,
-					1 => Phase.Solid,
-					2 => Phase.Liquid,
-					_ => throw new Exception($"Unknown phase code {entry.PhaseCode} for {entry.RawName}")
-				};
+		Phase phase = PhaseFromCode(entry.PhaseCode, entry.Comment, entry.RawName);
 
 				var bounds = new List<double>();
 				foreach (var interval in entry.Intervals)
@@ -262,9 +256,7 @@ public static class NASA9Loader
 			foreach (var entry in entriesInGroup)
 			{
 				var matchingPhase = phases.FirstOrDefault(sp =>
-					(entry.PhaseCode == 0 && sp.Phase == Phase.Gas) ||
-					(entry.PhaseCode == 1 && sp.Phase == Phase.Solid) ||
-					(entry.PhaseCode == 2 && sp.Phase == Phase.Liquid));
+					sp.Phase == PhaseFromCode(entry.PhaseCode, entry.Comment, entry.RawName));
 
 				if (matchingPhase != null)
 				{
@@ -273,6 +265,17 @@ public static class NASA9Loader
 				}
 			}
 		}
+	}
+
+	private static Phase PhaseFromCode(int phaseCode, string comment, string rawName)
+	{
+		if (phaseCode == 0)
+			return Phase.Gas;
+
+		if (comment.Contains("Liquid", StringComparison.OrdinalIgnoreCase))
+			return Phase.Liquid;
+
+		return Phase.Solid;
 	}
 
 	private static string GetBaseName(string rawName)
