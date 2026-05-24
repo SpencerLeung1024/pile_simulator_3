@@ -55,17 +55,16 @@ Godot 4.7.beta2, Forward+, Jolt Physics, C# 14, net10.0
 - Answered by GPT-5.5 and Opus 4.7:
 - - The dual problem is a system of (num elements + num phases) non-linear equations. It combines element usage constraints and mole fraction normalization constraints. How to set it up is in `docs/chemistry/dual_problem`
 
-- Solver architecture review by GPT-5.5, Opus 4.7, DeepSeek V4 Pro, and Kimi K2.6 is in `docs/chemistry/solver`
+- Solver:
+- - `docs/chemistry/solver`: architecture review (GPT-5.5, Opus 4.7, DeepSeek V4 Pro, Kimi K2.6)
+- - `docs/chemistry/solver_debug`: trying to stop NaN propagation and conserve mass (DeepSeek V4 Pro, GPT 5.5)
+- - `docs/chemistry/solver_debug_2`: comparing to NASA CEA, fix phase change, and options for handling liquids and solids (all models)
 
-- Solver debugging by DeepSeek V4 Pro and GPT-5.5 is in `docs/chemistry/solver_debug`
-- - DeepSeek V4 Pro: ended up making 474 mols of H2O ice
-- - GPT 5.5: got rid of liquids and solids, solution makes 100 mols of CO2 and 200 mols of H2
-- - My current implementation: got rid of liquids and solids, solution ends up mostly gaseous H2O with bits of CO2 and gaseous C
-
-- Questions for members of the Council:
-1. Check out `docs/chemistry/solver_debug_2` `cearun.txt` and `boxsim.txt`. I assume CEA's output is correct since, you know, NASA actually depends on the numbers. Can you explain what's going on and why CEA found that solution? Apart from lacking a CO species, what other simplifications in BoxSim lead to the equilibrium being wrong?
-2. Why is my solver trying to make gaseous carbon at 1000 K?
-3. I still feel that minoring out liquids and solids to stabilize J is a lazy fix. What, exactly, makes multi-phase equilibrium so much harder than gas-only? Does it make the problem non-convex? I know that CEA, STANJAN, etc. use an outer loop to turn condensed species on and off. Is this the most elegant, closest to real lifeway or is it for practical reasons?
+- BoxSim state:
+- - Initial conditions: 200 mol CH4, 100 mol O2 in 1 m^3 at 293 K
+- - Subset: H, C, O, CH4, H2O, CO2
+- - Current trajectory: converges to 143 mol CH4, 57 mol CO2, 30 mol H2, 4 mol H2O, 38 mol H2O(L), 41 mol H2O(cr), eventually no O2 at 800 K
+- - This is significantly different from CEA's result (57% CO and 30% H2 at 1400 K) because CO is not in the subset
 
 - Implied assumptions:
 - - There is one state for the entire box. All SpeciesPhases obey the same temperature and pressure from Volume

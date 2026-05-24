@@ -190,7 +190,8 @@ public static class AllSpecies
             // Okay it's been a while. I've now disabled liquids and solids in SolveReactions since no amount of stabilization would make them behave
             // H2O(cr) is re-enabled. The solver makes a few moles of it even at 1000 K, which is odd, but whatever
         };
-        NASA9Loader.Load(path, subset);
+        //NASA9Loader.Load(path, subset);
+        NASA9Loader.Load(path, null);
 
         // But thermo.inp does not have critical temperature, pressure, or molar volume
         // It assumes everything is an ideal gas and condensed phases have zero volume
