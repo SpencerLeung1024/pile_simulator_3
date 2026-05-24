@@ -1,0 +1,177 @@
+Thermodynamics:
+Mass: 9.75E+296 kg
+U: -1.58E+304 J
+T: 1293 K
+V: 1 kL
+P: 2.73 MPa
+S: 4.1E+300 J/K
+H = U + PV: -1.58E+304 J
+G = H - TS: -2.11E+304 J
+A = U - TS: -2.11E+304 J
+Resources:
+[color=#ffffff]ALHCL2[/color]
+gas: 546 Gmol, 550 Gg, 2.15 TL
+[color=#ffffff]ALHF2[/color]
+gas: 1.58E+84 mol, 6.16E+82 kg, 6.22E+84 L
+[color=#ffffff]ALHFCL[/color]
+gas: 3.39E+47 mol, 6.79E+45 kg, 1.34E+48 L
+[color=#ffffff]ALO--[/color]
+gas: 9.07 Gmol, 145 Gg, 35.7 GL
+[color=#ffffff]ALO2--[/color]
+gas: 27.5 umol, 879 ug, 108 uL
+[color=#ffffff]ALOCL[/color]
+gas: 149 Pmol, 2.38 Eg, 587 PL
+[color=#ffffff]ALOCL2[/color]
+gas: 3.12E+38 mol, 4.99E+36 kg, 1.23E+39 L
+[color=#ffffff]ALOF[/color]
+gas: 5.13E+64 mol, 1.8E+63 kg, 2.02E+65 L
+[color=#ffffff]ALOF2[/color]
+gas: 2.11E+103 mol, 1.14E+102 kg, 8.3E+103 L
+[color=#ffffff]ALOF2--[/color]
+gas: 2.4E+138 mol, 1.3E+137 kg, 9.45E+138 L
+[color=#ffffff]ALOHCL2[/color]
+gas: 6.15E+32 mol, 1.05E+31 kg, 2.42E+33 L
+[color=#ffffff]ALOHF[/color]
+gas: 4.55 kmol, 164 kg, 17.9 kL
+[color=#ffffff]ALOHF2[/color]
+gas: 4.39E+105 mol, 2.42E+104 kg, 1.73E+106 L
+[color=#ffffff]B2O2[/color]
+gas: 2.47 mmol, 133 mg, 9.74 mL
+[color=#ffffff]B2O3[/color]
+gas: 13.1 Emol, 915 Eg, 51.7 EL
+[color=#ffffff]B3O3CL3[/color]
+gas: 4.86E+166 mol, 3.91E+165 kg, 1.91E+167 L
+[color=#ffffff]B3O3F2CL[/color]
+gas: 2.63E+254 mol, 3.12E+253 kg, 1.04E+255 L
+[color=#ffffff]B3O3F3[/color]
+gas: 7.1E+297 mol, 9.75E+296 kg, 2.79E+298 L
+[color=#ffffff]B3O3FCL2[/color]
+gas: 5.21E+210 mol, 5.18E+209 kg, 2.05E+211 L
+[color=#ffffff]BCL2OH[/color]
+gas: 7.71 Gmol, 215 Gg, 30.4 GL
+[color=#ffffff]Be2OF2[/color]
+gas: 3.18E+180 mol, 1.72E+179 kg, 1.25E+181 L
+[color=#ffffff]Be3O3[/color]
+gas: 3.42E+52 mol, 1.64E+51 kg, 1.35E+53 L
+[color=#ffffff]Be4O4[/color]
+gas: 1.71E+117 mol, 1.09E+116 kg, 6.73E+117 L
+[color=#ffffff]BF2OH[/color]
+gas: 2.83E+95 mol, 1.86E+94 kg, 1.11E+96 L
+[color=#ffffff]BHF2[/color]
+gas: 4.07E+78 mol, 2.03E+77 kg, 1.6E+79 L
+[color=#ffffff]BHFCL[/color]
+gas: 7.51E+33 mol, 2.31E+32 kg, 2.95E+34 L
+[color=#ffffff]BO--[/color]
+gas: 12 Gmol, 323 Gg, 47.4 GL
+[color=#ffffff]BO2--[/color]
+gas: 2.37E+41 mol, 1.01E+40 kg, 9.32E+41 L
+[color=#ffffff]BOCL[/color]
+gas: 25.7 Emol, 689 Eg, 101 EL
+[color=#ffffff]BOCL2[/color]
+gas: 8.9E+29 mol, 2.39E+28 kg, 3.5E+30 L
+[color=#ffffff]BOF[/color]
+gas: 4.64E+67 mol, 2.12E+66 kg, 1.83E+68 L
+[color=#ffffff]BOF2[/color]
+gas: 4.48E+112 mol, 2.9E+111 kg, 1.76E+113 L
+[color=#ffffff]CF3CL[/color]
+gas: 24.2 umol, 1.67 mg, 95.3 uL
+[color=#ffffff]CF4[/color]
+gas: 8.34E+34 mol, 7.34E+33 kg, 3.28E+35 L
+[color=#ff5f5f]CH4[/color]
+gas: 200 mol, 3.21 kg, 787 L
+[color=#ffffff]Cs2SO4[/color]
+gas: 3.14E+28 mol, 3.01E+27 kg, 1.24E+29 L
+[color=#ffffff]CsBO2[/color]
+gas: 4.72E+41 mol, 2.02E+40 kg, 1.86E+42 L
+[color=#ffffff]D2O[/color]
+gas: 105 kmol, 1.68 Mg, 414 kL
+[color=#ffffff]K2SO4[/color]
+gas: 15.8 Zmol, 2.75 Yg, 62.1 ZL
+[color=#ffffff]KBO2[/color]
+gas: 2.11E+37 mol, 1.73E+36 kg, 8.33E+37 L
+[color=#ffffff]Li2SO4[/color]
+gas: 23.4 Gmol, 2.25 Tg, 92.1 GL
+[color=#ffffff]LiBO2[/color]
+gas: 1.82E+33 mol, 7.8E+31 kg, 7.18E+33 L
+[color=#ffffff]Na2SO4[/color]
+gas: 176 Gmol, 16.9 Tg, 694 GL
+[color=#ffffff]NaBO2[/color]
+gas: 4.18E+30 mol, 1.79E+29 kg, 1.64E+31 L
+[color=#ffffff]NbOCL3[/color]
+gas: 1.04E+103 mol, 1.67E+101 kg, 4.11E+103 L
+[color=#ffffff]NOF3[/color]
+gas: 12.2 mmol, 1.06 g, 47.8 mL
+[color=#ffffff]O2[/color]
+gas: 99.9 mol, 3.2 kg, 393 L
+[color=#ffffff]P3O6[/color]
+gas: 22.6 Tmol, 4.26 Pg, 88.8 TL
+[color=#ffffff]P4O10[/color]
+gas: 8.82E+61 mol, 2.5E+61 kg, 3.47E+62 L
+[color=#ffffff]P4O6[/color]
+gas: 534 Pmol, 117 Eg, 2.1 EL
+[color=#ffffff]P4O7[/color]
+gas: 8.41E+38 mol, 1.98E+38 kg, 3.31E+39 L
+[color=#ffffff]P4O8[/color]
+gas: 7.44E+48 mol, 1.87E+48 kg, 2.93E+49 L
+[color=#ffffff]P4O9[/color]
+gas: 2.27E+57 mol, 6.07E+56 kg, 8.92E+57 L
+[color=#ffffff]PO2--[/color]
+gas: 20.4 Zmol, 1.28 Yg, 80.2 ZL
+[color=#ffffff]POCL3[/color]
+gas: 3.05E+68 mol, 1.43E+67 kg, 1.2E+69 L
+[color=#ffffff]POF2CL[/color]
+gas: 2.51E+148 mol, 2.13E+147 kg, 9.89E+148 L
+[color=#ffffff]POF3[/color]
+gas: 1.77E+188 mol, 1.84E+187 kg, 6.96E+188 L
+[color=#ffffff]POFCL2[/color]
+gas: 2.79E+108 mol, 1.84E+107 kg, 1.1E+109 L
+[color=#ffffff]Rb2SO4[/color]
+gas: 577 Zmol, 55.4 Yg, 2.27 YL
+[color=#ffffff]RbBO2[/color]
+gas: 7.6E+39 mol, 3.26E+38 kg, 2.99E+40 L
+[color=#ffffff]Sc2O2[/color]
+gas: 99.9 kmol, 3.2 Mg, 393 kL
+[color=#ffffff]SiH2F2[/color]
+gas: 10 Ymol, 400 Yg, 39.4 YL
+[color=#ffffff]SiHBr3[/color]
+gas: 1.65 Mmol, 1.67 Mg, 6.5 ML
+[color=#ffffff]SiHCL3[/color]
+gas: 7.36E+38 mol, 7.42E+35 kg, 2.9E+39 L
+[color=#ffffff]SiHF3[/color]
+gas: 3.2E+162 mol, 1.86E+161 kg, 1.26E+163 L
+[color=#ffffff]SO2F2[/color]
+gas: 1.06E+53 mol, 1.08E+52 kg, 4.17E+53 L
+[color=#ffffff]SO2FCL[/color]
+gas: 587 Pmol, 48.8 Eg, 2.31 EL
+[color=#ffffff]SOF2[/color]
+gas: 1.16E+69 mol, 1E+68 kg, 4.57E+69 L
+[color=#ffffff]TiOCL[/color]
+gas: 35.7 Mmol, 571 Mg, 141 ML
+[color=#ffffff]TiOCL2[/color]
+gas: 1.7E+64 mol, 2.73E+62 kg, 6.71E+64 L
+[color=#ffffff]UO2[/color]
+gas: 71.1 mol, 19.2 kg, 280 L
+[color=#ffffff]UO2--[/color]
+gas: 36.6 Emol, 9.89 Zg, 144 EL
+[color=#ffffff]UO2F[/color]
+gas: 6.08E+97 mol, 1.76E+97 kg, 2.39E+98 L
+[color=#ffffff]UO2F2[/color]
+gas: 9.8E+161 mol, 3.02E+161 kg, 3.86E+162 L
+[color=#ffffff]UO3[/color]
+gas: 83 Tmol, 23.7 Pg, 327 TL
+[color=#ffffff]UO3--[/color]
+gas: 3.27E+104 mol, 9.35E+103 kg, 1.29E+105 L
+[color=#ffffff]UOF[/color]
+gas: 1.7E+63 mol, 4.63E+62 kg, 6.67E+63 L
+[color=#ffffff]UOF2[/color]
+gas: 4E+166 mol, 1.17E+166 kg, 1.57E+167 L
+[color=#ffffff]UOF3[/color]
+gas: 7.34E+237 mol, 2.28E+237 kg, 2.89E+238 L
+[color=#ffffff]UOF4[/color]
+gas: 2.44E+287 mol, 8.06E+286 kg, 9.62E+287 L
+[color=#ffffff]V4O10[/color]
+gas: 5.97E+49 mol, 2.17E+49 kg, 2.35E+50 L
+[color=#ffffff]WO2CL2[/color]
+gas: 8.67E+40 mol, 1.87E+40 kg, 3.41E+41 L
+[color=#ffffff]WOCL4[/color]
+gas: 1.38E+72 mol, 2.76E+71 kg, 5.43E+72 L

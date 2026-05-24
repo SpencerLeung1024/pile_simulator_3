@@ -177,6 +177,8 @@ public class Constants
 
     // SolveReactions
     public const uint MaxReactionSteps = 20;
+    public const double log_xMin = -100;
+    public const double log_xMax = 100;
     public const double N_mMin = 1e-6; // mol, N_m for phase m is clamped to be > this after every Newton step
     public const double V_mMin = 1e-6; // m^3, V_m is not used in the solver but is used for display
     public const double LambdaMaxJump = 1e1; // Maximum change in an element's element potential per step

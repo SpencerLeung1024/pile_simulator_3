@@ -225,27 +225,33 @@ public static class AllSpeciesPhases
     // It contains the raw names from thermo.inp, like "H2O(L)", "C(gr)", etc.
     // There is a rationale behind it, but it is not the same as Pile Simulator 3
 
-    public static void MakeUpEquationsOfState()
-    {
-        foreach(SpeciesPhase speciesPhase in list)
-        {
-            if (speciesPhase.Phase == Phase.Gas)
-            {
-                speciesPhase.EquationOfState = new IdealGasEquation()
-                {
-                    SpeciesPhase = speciesPhase
-                };
-            }
-            else
-            {
-                speciesPhase.EquationOfState = new IncompressiblePhaseEquation()
-                {
-                    SpeciesPhase = speciesPhase,
-                    v = 0.0
-                };
-            }
-        }
-    }
+	public static void MakeUpEquationsOfState()
+	{
+		foreach(Species species in AllSpecies.list)
+		{
+			foreach(SpeciesPhase speciesPhase in species.Phases)
+			{
+				if (speciesPhase.EquationOfState != null)
+					continue;
+
+				if (speciesPhase.Phase == Phase.Gas)
+				{
+					speciesPhase.EquationOfState = new IdealGasEquation()
+					{
+						SpeciesPhase = speciesPhase
+					};
+				}
+				else
+				{
+					speciesPhase.EquationOfState = new IncompressiblePhaseEquation()
+					{
+						SpeciesPhase = speciesPhase,
+						v = 0.0
+					};
+				}
+			}
+		}
+	}
 
     public static SpeciesPhase ByName(string name)
     {

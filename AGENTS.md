@@ -59,6 +59,12 @@ Godot 4.7.beta2, Forward+, Jolt Physics, C# 14, net10.0
 - - `docs/chemistry/solver`: architecture review (GPT-5.5, Opus 4.7, DeepSeek V4 Pro, Kimi K2.6)
 - - `docs/chemistry/solver_debug`: trying to stop NaN propagation and conserve mass (DeepSeek V4 Pro, GPT 5.5)
 - - `docs/chemistry/solver_debug_2`: comparing to NASA CEA, fix phase change, and options for handling liquids and solids (all models)
+- - `docs/chemistry/solver_debug_3`: trying to stabilize when all 682 possible species are loaded. Spurious oxides are produced after one step. See `boxsim.txt` and `output.txt`
+
+- Questions for AI models of the Council:
+1. Where is the error coming from? How do I stabilize the solver with the architecture I have?
+2. If it can't be stabilized, how do I choose a good subset programatically instead of manually reading all 1612 species phases?
+3. I need a source of data for T_c, P_c, and v_c for cubic EOS. NIST Chemistry WebBook has pages for each species but I can't download a dataset. Where else can I get this data?
 
 - BoxSim state:
 - - Initial conditions: 200 mol CH4, 100 mol O2 in 1 m^3 at 293 K
