@@ -17,7 +17,7 @@ public class ResourceDisplayEntry
 // The matter may be made up of numerous species, existing as gas, liquid, and solid phases
 public class Volume : Inventory<SpeciesPhaseResource>
 {
-    const bool VERBOSE = true;
+    const bool VERBOSE = false;
 
     // Resources: the species in phases in this volume, and their amounts in mol
     // Volume: m^3
@@ -119,6 +119,19 @@ public class Volume : Inventory<SpeciesPhaseResource>
         return info;
     }
 
+    private void FullyDissociateAndRemove(SpeciesPhaseResource resource)
+    {
+        foreach ((Element element, uint count) in resource.SpeciesPhase.Species.Formula)
+        {
+            if (!freeElements.ContainsKey(element))
+            {
+                freeElements[element] = 0.0;
+            }
+            freeElements[element] += count * resource.n;
+        }
+        Resources.Remove(resource);
+    }
+
     private void Dissociate()
     {
         // We may need to remove resources if they were fully dissociated, so we need a backward for loop
@@ -138,6 +151,7 @@ public class Volume : Inventory<SpeciesPhaseResource>
                 {
                     n_dissociated = resource.n; // Fully dissociate if it would go below the minimum threshold
                     Resources.RemoveAt(j); // We keep a reference to species so it's ok
+                    // Don't use FullyDissociateAndRemove or you will double count the freed elements below
                 }
                 else
                 {
@@ -446,18 +460,14 @@ public class Volume : Inventory<SpeciesPhaseResource>
             }
         }
 
-        // Get += n_j
+        // Get and apply += n_j
         vec_x = (-vec_mu / (Constants.R * T) + view.TransposeThisAndMultiply(vec_lambda)).PointwiseExp();
         vec_n = Vector<double>.Build.Dense(s);
         for (int j = 0; j < s; j++)
         {
             int phase = (int)viewSpecies[j].Phase;
             vec_n[j] = vec_N[phase] * vec_x[j];
-        }
 
-        // Apply += n_j
-        for (int j = 0; j < s; j++)
-        {
             // Don't create resources with miniscule amounts
             if (vec_n[j] < Constants.n_jMin)
             {
@@ -576,87 +586,117 @@ public class Volume : Inventory<SpeciesPhaseResource>
                 continue;
             }
 
-            double[] mu_stds = new double[numPhases];
+            // うん。今日から私たちはμ'sだ！
+            List<double> mus = new List<double>(); // Needs to be a list so we can do IndexOf
+            SpeciesPhaseResource gasResource = null; // May be null
             for (int j = 0; j < numPhases; j++)
             {
-                mu_stds[j] = phaseResources[j].SpeciesPhase.Getmu(
-                    Constants.NISTNormalTemperature,
-                    Constants.bar,
-                    1.0
-                );
-            }
-
-            int gasj = phaseResources.FindIndex(r => r.SpeciesPhase.Phase == Phase.Gas);
-            if (gasj == -1)
-            {
-                // No gas phase for this species; saturation vapor pressure cannot be determined
-                // move toward lowest-mu condensed phase
-                // TODO: ban the case of diamond -> graphite
-                // SolvePhases bypasses Species.DissociationTemperature
-                
-                double fractionOfSrcToMove = Constants.PhaseDamping / (numPhases - 1);
-                int lowestj = mu_stds.ToList().IndexOf(mu_stds.Min());
-                for (int j = 0; j < numPhases; j++)
+                SpeciesPhaseResource resource = phaseResources[j];
+                if (resource.SpeciesPhase.Phase == Phase.Gas)
                 {
-                    if (j != lowestj)
-                    {
-                        double n_to_move = phaseResources[j].n * fractionOfSrcToMove;
-                        phaseResources[j].n -= n_to_move;
-                        phaseResources[lowestj].n += n_to_move;
-                    }
+                    gasResource = resource;
+                    // Use the gas formula: G°_gas(T) + RT ln(φ_gas * P_gas / P°)
+                    double P_partial = P * (resource.n / all_vec_N[0]); // Assuming gases contribute pressure proportionally
+                    mus.Add(resource.SpeciesPhase.Getmu(
+                        T,
+                        P_partial,
+                        1.0
+                    ));
+                }
+                else
+                {
+                    // Use the condensed formula G°_cond(T) + v_cond*(P - P°)
+                    double v = resource.SpeciesPhase.EquationOfState.Getv(T, P);
+                    double poyntingCorrection = v * (P - Constants.bar);
+                    mus.Add(resource.SpeciesPhase.Getmu(
+                        T,
+                        0.0,
+                        1.0
+                    ) - poyntingCorrection);
                 }
             }
-            else
-            {
-                double V_gas = Math.Max(all_vec_V[0], Constants.V_mMin); // Avoid division by zero
-                SpeciesPhaseResource gasResource = phaseResources[gasj];
-                double P_partial = P * (gasResource.n / all_vec_N[0]); // Assuming gases contribute pressure proportionally
-                double mu_gas = gasResource.SpeciesPhase.Getmu(
-                    T,
-                    P_partial,
-                    1.0
-                );
 
-                // We will consume the entire P_sat, so we can only take from one source phase per species each time SolvePhases is called
-                // Get the condensed phase that is farthest from equilibrium
-                double[] mu_diffs = new double[numPhases];
+            GD.Print($"Species {species.Name}: mus = [{string.Join(", ", mus)}], n = [{string.Join(", ", phaseResources.Select(r => r.n))}]");
+
+            // Algorithm:
+            // Every frame, move Constants.PhaseDamping fraction of moles from the highest mu to the lowest mu
+            // If either src or dst is a gas, calculate P_sat and use n_sat as a bound on moles to move
+            // Otherwise, between condensed phases, mu does not change with partial pressure so move a fixed fraction
+
+            /*
+            int srcj = mus.IndexOf(mus.Max());
+            int dstj = mus.IndexOf(mus.Min());
+            SpeciesPhaseResource srcResource = phaseResources[srcj];
+            SpeciesPhaseResource dstResource = phaseResources[dstj];
+            if (srcResource == gasResource || dstResource == gasResource)
+            {
+            */
+            if (gasResource != null)
+            {
+                // Case 1: src or dst is gas
+                // Well actually the other path is broken so just select the mu with the largest absolute difference from gas
+                int gasj = phaseResources.IndexOf(gasResource);
+                double mu_gas = mus[gasj];
+                List<double> absDiffmus = new List<double>();
                 for (int j = 0; j < numPhases; j++)
                 {
-                    double mu_cond = phaseResources[j].SpeciesPhase.Getmu(
-                        T,
-                        P, // System pressure
+                    absDiffmus.Add(Math.Abs(mus[j] - mu_gas));
+                }
+                int condj = absDiffmus.IndexOf(absDiffmus.Max());
+                //int condj = srcResource == gasResource ? dstj : srcj;
+                //int gasj = srcResource == gasResource ? srcj : dstj;
+                SpeciesPhaseResource condResource = phaseResources[condj];
+                // We used mu at current conditions to determine src and dst
+                // But the exact formula for P_sat requires mu at standard conditions
+                double[] mu_stds = new double[numPhases];
+                for (int j = 0; j < numPhases; j++)
+                {
+                    mu_stds[j] = phaseResources[j].SpeciesPhase.Getmu(
+                        Constants.NISTNormalTemperature,
+                        Constants.bar,
                         1.0
                     );
-                    mu_diffs[j] = mu_cond - mu_gas;
                 }
-                double[] abs_mu_diffs = mu_diffs.Select(diff => Math.Abs(diff)).ToArray();
-                int srcj = abs_mu_diffs.ToList().IndexOf(abs_mu_diffs.Max());
-
-                if (srcj != gasj)
+                double mu_std_cond = mu_stds[condj];
+                double mu_std_gas = mu_stds[gasj];
+                GD.Print($"mu_std_cond = {mu_std_cond}, mu_std_gas = {mu_std_gas}");
+                GD.Print($"n_cond = {condResource.n}, n_gas = {gasResource.n}");
+                double P_sat = Constants.bar * Math.Exp((mu_std_cond - mu_std_gas) / (Constants.R * T));
+                double V_gas = Math.Max(all_vec_V[0], Constants.V_mMin);
+                double n_gas_sat = P_sat * V_gas / (Constants.R * T);
+                double gas_wants_n = n_gas_sat - gasResource.n;
+                double n_to_move = 0.0;
+                GD.Print($"P_sat = {P_sat}, n_gas_sat = {n_gas_sat}, gas_wants_n = {gas_wants_n}");
+                if (gas_wants_n < 0.0)
                 {
-                    double mu_std_cond = mu_stds[srcj];
-                    double mu_std_gas = mu_stds[gasj];
-                    double P_sat = Constants.bar * Math.Exp((mu_std_cond - mu_std_gas) / (Constants.R * T));
-                    double n_gas_sat = P_sat * V_gas / (Constants.R * T);
-                    double gas_wants_n = n_gas_sat - gasResource.n;
-                    double n_to_move = 0.0;
-                    // See if we have enough to move (either to or from gas)
-                    if (gas_wants_n > 0) // Not enough partial pressure, move to gas
-                    {
-                        n_to_move = Math.Min(gas_wants_n, phaseResources[srcj].n);
-                    }
-                    else if (gas_wants_n < 0) // Too much partial pressure, move from gas
-                    {
-                        n_to_move = Math.Min(-gas_wants_n, gasResource.n);
-                    }
-                    if (n_to_move > 0.0)
-                    {
-                        n_to_move *= Constants.PhaseDamping;
-                        phaseResources[srcj].n -= n_to_move;
-                        gasResource.n += n_to_move;
-                    }
+                    // Case 1a: gas -> cond
+                    n_to_move = -Math.Min(-gas_wants_n, gasResource.n);
+                }
+                else
+                {
+                    // Case 1b: cond -> gas
+                    n_to_move = Math.Min(gas_wants_n, condResource.n);
+                }
+                if (n_to_move != 0.0)
+                {
+                    n_to_move *= Constants.PhaseDamping;
+                    GD.Print($"{condResource.SpeciesPhase.Phase} <-> Gas: moving {n_to_move} moles");
+                    condResource.n -= n_to_move;
+                    gasResource.n += n_to_move;
                 }
             }
+            // This path is bugged right now
+            /*
+            else
+            {
+                // Case 2: cond -> cond
+                // Just move a fixed fraction of src
+                double n_to_move = srcResource.n * Constants.PhaseDamping;
+                GD.Print($"{srcResource.SpeciesPhase.Phase} <-> {dstResource.SpeciesPhase.Phase}: moving {n_to_move} moles");
+                srcResource.n -= n_to_move;
+                dstResource.n += n_to_move;
+            }
+            */
 
             // If any real resources ended up below the minimum amount, remove them
             // Backwards for
@@ -664,8 +704,9 @@ public class Volume : Inventory<SpeciesPhaseResource>
             {
                 if (realResources[j].n < Constants.n_jMin)
                 {
+                    // Return its elements to freeElements
+                    FullyDissociateAndRemove(realResources[j]);
                     realResources.RemoveAt(j);
-                    Resources.Remove(realResources[j]);
                 }
             }
 
@@ -674,7 +715,15 @@ public class Volume : Inventory<SpeciesPhaseResource>
             {
                 if (fakeResource.n > 0.0)
                 {
-                    Resources.Add(fakeResource);
+                    // But only if enough exists
+                    if (fakeResource.n > Constants.n_jMin)
+                    {
+                        Resources.Add(fakeResource);
+                    }
+                    else
+                    {
+                        FullyDissociateAndRemove(fakeResource);
+                    }
                 }
             }
         }
