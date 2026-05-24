@@ -325,7 +325,10 @@ public partial class BoxSim : Node3D
 			n = 25
 		});
 		*/
-		_volume.UTarget = _volume.U;
+		_volume.AssignUAtTP(
+			Constants.NISTNormalTemperature,
+			Constants.bar
+		);
 
 		UpdateUI();
 	}
