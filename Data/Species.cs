@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MathNet.Numerics.LinearAlgebra;
 
 public class Species
 {
@@ -169,6 +168,10 @@ public static class AllSpecies
 
             // Note that I have left out "CO" carbon monoxide (line 2623). At high temperatures, CO is a significant part of the system
             // We can always add that later, or use subset = null to load everything
+            "CO",
+            //"OH",
+            //"H",
+            //"O"
 
             // Oh, I think I know why the solver breaks
             // Between C(gr) and H2O(cr), H2O(cr) is far better preferred
@@ -190,8 +193,8 @@ public static class AllSpecies
             // Okay it's been a while. I've now disabled liquids and solids in SolveReactions since no amount of stabilization would make them behave
             // H2O(cr) is re-enabled. The solver makes a few moles of it even at 1000 K, which is odd, but whatever
         };
-        //NASA9Loader.Load(path, subset);
-        NASA9Loader.Load(path, null);
+        NASA9Loader.Load(path, subset);
+        //NASA9Loader.Load(path, null);
 
         // But thermo.inp does not have critical temperature, pressure, or molar volume
         // It assumes everything is an ideal gas and condensed phases have zero volume
@@ -231,8 +234,8 @@ public static class AllSpeciesPhases
 		{
 			foreach(SpeciesPhase speciesPhase in species.Phases)
 			{
-				if (speciesPhase.EquationOfState != null)
-					continue;
+				// TODO: Join with CoolProp
+                // If T_c, P_c, v_c, and omega exist, use a cubic EOS
 
 				if (speciesPhase.Phase == Phase.Gas)
 				{
@@ -246,6 +249,7 @@ public static class AllSpeciesPhases
 					speciesPhase.EquationOfState = new IncompressiblePhaseEquation()
 					{
 						SpeciesPhase = speciesPhase,
+                        // TODO: Get a dataset of molar volumes of solids
 						v = 0.0
 					};
 				}
@@ -256,146 +260,5 @@ public static class AllSpeciesPhases
     public static SpeciesPhase ByName(string name)
     {
         return nameToPhase[name];
-    }
-}
-
-public static class FormulaTable
-{
-    // table[element, species] = n_ij as seen in the STANJAN PDF, where i = element and j = species
-    //public static uint[,] table = new uint[,]();
-    //public static uint[,] table; // We don't know how many species and elements there will be
-    public static Matrix<double> table; // Use Math.NET Numerics so we can do matrix vector operations
-
-    // Create a view of the table containing only certain elements and species using those elements
-    // ulong is a bitmask of elements
-    // The tuple contains:
-    // - the elements, as used in the view's rows
-    // - the species, as used in the view's columns
-    // - the view itself, as a matrix
-    // See GetViewBitmask and GetView below
-    public static Dictionary<ulong, (Element[], SpeciesPhase[], Matrix<double>)> viewCache = new Dictionary<ulong, (Element[], SpeciesPhase[], Matrix<double>)>();
-    private static readonly object viewCacheLock = new object(); // Prevent multiple threads from trying to make a new entry and put it in viewCache
-
-    // Pulls data from Elements, AllSpecies and AllSpeciesPhases. Make sure those are fully filled in before calling this
-    public static void Initialize()
-    {
-        int a = Elements.list.Length; // The PDF uses a = num elements
-        int s = AllSpeciesPhases.list.Count; // The PDF uses s = num species
-        table = Matrix<double>.Build.Dense(a, s); // All cells of the matrix will be initialized to zero
-        // n_ij only has values of uint, but operations with mole fractions require <double> and <double>
-        for (int j = 0; j < s; j++)
-        {
-            SpeciesPhase speciesPhase = AllSpeciesPhases.list[j];
-            Species species = speciesPhase.Species;
-            foreach ((Element element, uint count) in species.Formula)
-            {
-                int i = (int)element.Z - 1; // hydrogen.Z = 1 but i should be 0
-                table[i, j] = (double)count;
-            }
-        }
-    }
-
-    public static ulong GetViewBitmask(List<Element> elements)
-    {
-        // Create a bitmask of the elements in the view
-        // The bitmask is a ulong, so it can only represent up to 64 elements
-        // Will return ulong 0 if terbium (Z=65) or anything above is included, in which case you must use the full table
-        // If only there were an Int128...
-        ulong bitmask = 0;
-        foreach (Element element in elements)
-        {
-            int i = (int)element.Z - 1;
-            if (i >= 64)
-            {
-                // Can't represent this element in the bitmask, so return 0 to indicate that the full table should be used
-                return 0;
-            }
-            else
-            {
-                bitmask |= (1UL << i);
-            }
-        }
-        return bitmask;
-    }
-
-    public static void GetView(ulong bitmask, out Element[] viewElements, out SpeciesPhase[] viewSpecies, out Matrix<double> view)
-    {
-        if (bitmask == 0)
-        {
-            // Can't represent this view in the bitmask, so return the full table
-            viewElements = Elements.list;
-            viewSpecies = AllSpeciesPhases.list.ToArray();
-            view = table;
-        }
-        else
-        {
-            viewCache.TryGetValue(bitmask, out (Element[], SpeciesPhase[], Matrix<double>) cachedView);
-            if (cachedView != default)
-            {
-                viewElements = cachedView.Item1;
-                viewSpecies = cachedView.Item2;
-                view = cachedView.Item3;
-            }
-            else
-            {
-                // Create the view and cache it
-                lock (viewCacheLock)
-                {
-                    List<Element> viewElementsList = new List<Element>();
-                    List<SpeciesPhase> viewSpeciesList = new List<SpeciesPhase>();
-                    // Fill these in as we discover i and j below
-
-                    // "Only for contiguous ranges. Math.NET's SubMatrix(rowStart, rowCount, colStart, colCount) creates a view over contiguous rows/columns. For the arbitrary non-contiguous selection you need (bitmask-based), there's no built-in view." - DeepSeek V4 Pro
-
-                    // Math.NET DenseMatrix uses column-major storage (Fortran order).
-                    // If I really wanted to be fast I would transpose the table before getting element rows, but it probably doesn't matter in the end
-                    // table and view should remain [i, j] though. The heavy work in Volume.SolveReactions hits different i of the same j more often than different j of the same i, so column-major is better overall
-
-                    // Our algorithm will be:
-                    // 1. Keep only rows (elements) that are in the bitmask
-                    // 2. Keep only columns (species) that have non-zero counts
-
-                    // 1.
-                    List< Vector<double> > viewRowsList = new List< Vector<double> >(); // viewRowsList[i] = row i of the view, as a vector
-                    for (int table_i = 0; table_i < 64; table_i++)
-                    {
-                        // Get this element's bit from the bitmask
-                        if ((bitmask & (1UL << table_i)) != 0)
-                        {
-                            viewElementsList.Add(Elements.list[table_i]);
-                            viewRowsList.Add(table.Row(table_i));
-                        }
-                    }
-
-                    Matrix<double> tempMatrix = Matrix<double>.Build.DenseOfRowVectors(viewRowsList);
-
-                    // 2.
-                    List< Vector<double> > viewColsList = new List< Vector<double> >(); // viewColsList[j] = column j of the view, as a vector
-                    for (int table_j = 0; table_j < AllSpeciesPhases.list.Count; table_j++)
-                    {
-                        Vector<double> col = tempMatrix.Column(table_j);
-                        // "Sum() is a native Math.NET method, SIMD-accelerated, and avoids LINQ delegate overhead."
-                        // IEnumerable.Any has early exit but the overhead probably makes it worse in this case
-                        if (col.Sum() > 0.0) // double Vector<double>.Sum()
-                        //if (col.Max() > 0.0) // (extension) double IEnumerable<double>.Max()
-                        //if (col.Any(value => value > 0.0)) // (extension) bool IEnumerable<double>.Any<double>(Func<double, bool> predicate)
-                        {
-                            viewSpeciesList.Add(AllSpeciesPhases.list[table_j]);
-                            viewColsList.Add(col);
-                        }
-                    }
-
-                    // Build the view
-                    view = Matrix<double>.Build.DenseOfColumnVectors(viewColsList);
-
-                    // Fix the lists as arrays
-                    viewElements = viewElementsList.ToArray();
-                    viewSpecies = viewSpeciesList.ToArray();
-
-                    // Cache the view
-                    viewCache[bitmask] = (viewElements, viewSpecies, view);
-                } // End lock
-            }
-        }
     }
 }

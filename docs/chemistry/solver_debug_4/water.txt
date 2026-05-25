@@ -1,0 +1,115 @@
+Godot Engine v4.7.beta2.mono.official.777579205 - https://godotengine.org
+D3D12 12_0 - Forward+ - Using Device #0: NVIDIA - NVIDIA GeForce RTX 4060 Laptop GPU
+
+118 Elements: 1.20 ms
+7 Species and 10 Species Phases: 37.62 ms
+Formulas: 9.65 ms
+3558 Nuclides: 11.69 ms
+Thermodynamics:
+Mass: 5.4 kg
+U: -82.4 MJ
+T: 293 K
+V: 1 kL
+P: 100 kPa
+S: 30.1 kJ/K
+H = U + PV: -82.3 MJ
+G = H - TS: -91.1 MJ
+A = U - TS: -91.2 MJ
+Resources:
+[color=#7fbfff]H2O[/color]
+gas: 100 mol, 1.8 kg, 2.44 kL
+liquid: 100 mol, 1.8 kg, 0 L
+solid: 100 mol, 1.8 kg, 0 L
+Species H2O: mus = [-295009.4492987706, -306335.06240065506, -305868.2247186473], n = [100, 100, 100]
+Solid -> Liquid: n_to_move = 10
+Gas <-> Liquid: P_sat = 2338.4087391199064
+Gas -> Liquid: n_to_move = 9.904060744974778
+Thermodynamics:
+Mass: 5.4 kg
+U: -82.4 MJ
+T: 293 K
+V: 1 kL
+P: 244 kPa
+S: 30.1 kJ/K
+H = U + PV: -82.1 MJ
+G = H - TS: -90.9 MJ
+A = U - TS: -91.2 MJ
+Resources:
+[color=#7fbfff]H2O[/color]
+gas: 90.1 mol, 1.62 kg, 901 L
+liquid: 120 mol, 2.16 kg, 0 L
+solid: 90 mol, 1.62 kg, 0 L
+Species H2O: mus = [-299238.6285873472, -307965.5980725204, -306910.79349293525], n = [90.09593925502523, 119.90406074497477, 90]
+Solid -> Liquid: n_to_move = 9
+Gas <-> Liquid: P_sat = 8538.392327844467
+Gas -> Liquid: n_to_move = 8.684560741092259
+Thermodynamics:
+Mass: 5.4 kg
+U: -82.4 MJ
+T: 316 K
+V: 1 kL
+P: 237 kPa
+S: 30.4 kJ/K
+H = U + PV: -82.1 MJ
+G = H - TS: -91.7 MJ
+A = U - TS: -91.9 MJ
+Resources:
+[color=#7fbfff]H2O[/color]
+gas: 81.4 mol, 1.47 kg, 904 L
+liquid: 138 mol, 2.48 kg, 0 L
+solid: 81 mol, 1.46 kg, 0 L
+Species H2O: mus = [-302609.93386578694, -309306.4900105872, -307764.6368330225], n = [81.41137851393297, 137.58862148606704, 81]
+Solid -> Liquid: n_to_move = 8.1
+Gas <-> Liquid: P_sat = 20174.814349575478
+Gas -> Liquid: n_to_move = 7.413572718129682
+Thermodynamics:
+Mass: 5.4 kg
+U: -82.4 MJ
+T: 334 K
+V: 1 kL
+P: 226 kPa
+S: 30.5 kJ/K
+H = U + PV: -82.1 MJ
+G = H - TS: -92.3 MJ
+A = U - TS: -92.5 MJ
+Resources:
+[color=#7fbfff]H2O[/color]
+gas: 74 mol, 1.33 kg, 909 L
+liquid: 153 mol, 2.76 kg, 0 L
+solid: 72.9 mol, 1.31 kg, 0 L
+Species H2O: mus = [-305268.19392226246, -310375.6713528037, -308446.3230896835], n = [73.99780579580329, 153.1021942041967, 72.9]
+Solid -> Liquid: n_to_move = 7.290000000000001
+Gas <-> Liquid: P_sat = 36322.919835444365
+Gas -> Liquid: n_to_move = 6.140410635520978
+Thermodynamics:
+Mass: 5.4 kg
+U: -82.4 MJ
+T: 347 K
+V: 1 kL
+P: 213 kPa
+S: 30.6 kJ/K
+H = U + PV: -82.1 MJ
+G = H - TS: -92.8 MJ
+A = U - TS: -93 MJ
+Resources:
+[color=#7fbfff]H2O[/color]
+gas: 67.9 mol, 1.22 kg, 917 L
+liquid: 167 mol, 3 kg, 0 L
+solid: 65.6 mol, 1.18 kg, 0 L
+
+Skipping ahead hundreds of steps...
+
+Thermodynamics:
+Mass: 5.4 kg
+U: -82.4 MJ
+T: 381 K
+V: 1 kL
+P: 129 kPa
+S: 30.9 kJ/K
+H = U + PV: -82.2 MJ
+G = H - TS: -94 MJ
+A = U - TS: -94.1 MJ
+Resources:
+[color=#7fbfff]H2O[/color]
+gas: 40.8 mol, 734 g, 1 kL
+liquid: 259 mol, 4.67 kg, 0 L

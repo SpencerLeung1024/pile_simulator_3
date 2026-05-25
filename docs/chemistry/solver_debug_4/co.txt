@@ -1,0 +1,57 @@
+Godot Engine v4.7.beta2.mono.official.777579205 - https://godotengine.org
+D3D12 12_0 - Forward+ - Using Device #0: NVIDIA - NVIDIA GeForce RTX 4060 Laptop GPU
+
+118 Elements: 1.25 ms
+7 Species and 10 Species Phases: 42.94 ms
+Formulas: 11.07 ms
+3558 Nuclides: 12.51 ms
+Thermodynamics:
+Mass: 6.41 kg
+U: -15.7 MJ
+T: 293 K
+V: 1 kL
+P: 100 kPa
+S: 57.6 kJ/K
+H = U + PV: -15.6 MJ
+G = H - TS: -32.5 MJ
+A = U - TS: -32.6 MJ
+Resources:
+[color=#ff5f5f]CH4[/color]
+gas: 200 mol, 3.21 kg, 4.87 kL
+[color=#ffffff]O2[/color]
+gas: 100 mol, 3.2 kg, 2.44 kL
+Now with 67% fewer phases!
+Considering 7 gas species
+Species 0: C = [C:1]
+Species 1: CH4 = [C:1, H:4]
+Species 2: CO = [C:1, O:1]
+Species 3: CO2 = [C:1, O:2]
+Species 4: H2 = [H:2]
+Species 5: H2O = [H:2, O:1]
+Species 6: O2 = [O:2]
+vec_mu = [670328.0054099412, -129235.4455290447, -168479.44036466122, -456180.7393551868, -38310.13630249405, -297180.97780552326, -60140.46194424425]
+Selecting j = 3 (CO2) with specificMu = -456180.7393551868 as dominant species.
+Selecting j = 5 (H2O) with specificMu = -297180.97780552326 as dominant species.
+Selecting j = 2 (CO) with specificMu = -168479.44036466122 as dominant species.
+reactionStep = 0
+vec_lambda = [-1.9446414738673141, 48.913845162898355, -118.03688479768711]
+vec_x = [3.720075976020836E-44, 7.799450122442034E+40, 1, 1, 137096.37576943368, 1, 3.720075976020836E-44]
+vec_n = [3.720075976020836E-50, 7.799450122442033E+34, 1E-06, 1E-06, 0.13709637576943368, 1E-06, 3.720075976020836E-50]
+vec_p = [0.8, 0.2, 0.2]
+vec_F = [3.1197800489768133E+35, 7.799450122442033E+34, -0.199996, 7.799450122442034E+40]
+J = 
+[1.2479120195907253E+36, 3.1197800489768133E+35, 2E-06, 3.1197800489768134E+41]
+[3.1197800489768133E+35, 7.799450122442033E+34, 3E-06, 7.799450122442034E+40]
+[2E-06, 3E-06, 5.999999999999999E-06, 4]
+[3.1197800489768134E+41, 7.799450122442034E+40, 4, 0]
+delta_x = [-∞, ∞, ∞, NaN]
+
+E 0:00:08:440   int System.Math.Sign(double): System.ArithmeticException: Function does not accept floating point Not-a-Number values.
+  <C++ Error>   System.ArithmeticException
+  <C++ Source>  :0 @ int System.Math.Sign(double)
+  <Stack Trace> :0 @ int System.Math.Sign(double)
+                Volume.cs:444 @ void Volume.SolveReactionsGas()
+                Volume.cs:741 @ void Volume.Solve()
+                BoxSim.cs:259 @ void BoxSim.OnStep()
+                Callable.generics.cs:39 @ void Godot.Callable.<From>g__Trampoline|1_0(object, Godot.NativeInterop.NativeVariantPtrArgs, Godot.NativeInterop.godot_variant&)
+                DelegateUtils.cs:86 @ void Godot.DelegateUtils.InvokeWithVariantArgs(nint, System.Void*, Godot.NativeInterop.godot_variant**, int, Godot.NativeInterop.godot_variant*)

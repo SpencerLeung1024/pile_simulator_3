@@ -226,39 +226,63 @@ public class Volume : Inventory<SpeciesPhaseResource>
 		}
 
 		Element[] viewElements; // i = an element, a = num elements, elements are in order of increasing Z
-		SpeciesPhase[] multiPhaseViewSpecies; // j = a species, s = num species, unordered, but consistent with the order of their addition to AllSpeciesPhases
-		Matrix<double> multiPhaseView; // view[i, j] = n_ij = count of element i in species j
+		SpeciesPhase[] viewSpecies; // j = a species, s = num species, unordered, but consistent with the order of the columns of view
+		Matrix<double> view; // view[i, j] = n_ij = count of element i in species j
 		// The nice thing about Vector<T> and Matrix<T> is that they are initialized with zeros
-		FormulaTable.GetView(bitmask, out viewElements, out multiPhaseViewSpecies, out multiPhaseView);
+		FormulaTable.GetGasView(bitmask, out viewElements, out viewSpecies, out view);
 
-		// New in SolveReactionsGas: view chopping
-		List<SpeciesPhase> viewSpeciesList = new List<SpeciesPhase>();
-		List< Vector<double> > jSticks = new List< Vector<double> >();
-		for (int multiPhasej = 0; multiPhasej < multiPhaseViewSpecies.Length; multiPhasej++)
-		{
-			SpeciesPhase species = multiPhaseViewSpecies[multiPhasej];
-			if (species.Phase == Phase.Gas)
-			{
-				viewSpeciesList.Add(species);
-				jSticks.Add(multiPhaseView.Column(multiPhasej));
-			}
-		}
-		// Fix as array and matrix
-		SpeciesPhase[] viewSpecies = viewSpeciesList.ToArray();
-		Matrix<double> view = Matrix<double>.Build.DenseOfColumnVectors(jSticks);
 		int a = viewElements.Length;
 		int s = viewSpecies.Length;
 
-		// GPT-5.5: Pre-solve vec_lambda so the dominant species has x_j close to 1 and J doesn't blow up
-		// I have no idea how this works
-		Vector<double> initialMu = Vector<double>.Build.Dense(s);
+		if (VERBOSE)
+		{
+			GD.Print("Now with 67% fewer phases!");
+			GD.Print($"Considering {s} gas species");
+			for (int j = 0; j < s; j++)
+			{
+				GD.Print($"Species {j}: {viewSpecies[j].Species.Name} = [{string.Join(", ", viewSpecies[j].Species.Formula.Select(kv => $"{kv.Key.Symbol}:{kv.Value}"))}]");
+			}
+		}
+
+		// We need to declare these outside the loop
+		Vector<double> vec_mu = Vector<double>.Build.Dense(s);
+		Vector<double> vec_specificMu = Vector<double>.Build.Dense(s);
+		Vector<double> log_x;
+		Vector<double> vec_x;
+		Vector<double> vec_n;
+
+		// Moved out of the loop because I realized mu_j depends only on T and P, which are held constant during SolveReactions
+		
+		// `docs/chemistry/solver/opus_4_7.md`:
+		// mu_j is a non-linear function so there's no way to optimize it other than calling it for each species
+		// Calculate mu_j of every species
 		for (int j = 0; j < s; j++)
 		{
-			initialMu[j] = viewSpecies[j].Getmu(T, P, 1.0);
+			vec_mu[j] = viewSpecies[j].Getmu(T, P, 1.0);
+			// mu_j = chemical potential of species j
+			// Use the pure species chemical potential (mole fraction x_j = 1)
+			// 2026-05-24: Use specific (per mass) mu so large molecules don't automatically win
+			// Selecting j = 62 ((CH3COOH)2) with initialMu = -1045646.0021503759 as dominant species.
+			// Selecting j = 116 ((HCOOH)2) with initialMu = -913647.9969556128 as dominant species.
+			// Selecting j = 18 (HO(CO)2OH) with initialMu = -820947.7813919536 as dominant species.
+			vec_specificMu[j] = vec_mu[j]; // Converges in the 6 subset case
+			//vec_specificMu[j] = vec_mu[j] / viewSpecies[j].Species.MolarMass; // Does not converge
+			//vec_specificMu[j] = vec_mu[j] / viewSpecies[j].Species.Formula.Sum(kv => kv.Value); // Does not converge
 		}
+		if (VERBOSE)
+		{
+			GD.Print($"vec_mu = [{string.Join(", ", vec_mu)}]");
+		}
+
+		// GPT-5.5: Pre-solve vec_lambda so the dominant species has x_j close to 1 and J doesn't blow up
+		// I have no idea how this works
 		List<int> selectedSpecies = new List<int>();
 		List<Vector<double>> orthonormalColumns = new List<Vector<double>>();
-		foreach (int j in Enumerable.Range(0, s).OrderBy(j => initialMu[j]))
+		//foreach (int j in Enumerable.Range(0, s).OrderBy(j => vec_specificMu[j]))// vec_mu[j]))
+		// Enforce the three binary compounds always
+		foreach (int j in new List<int>{viewSpecies.IndexOf(AllSpeciesPhases.ByName("CO2")),
+						   viewSpecies.IndexOf(AllSpeciesPhases.ByName("H2O")),
+						   viewSpecies.IndexOf(AllSpeciesPhases.ByName("CH4"))})
 		{
 			Vector<double> residual = view.Column(j).Clone();
 			foreach (Vector<double> q in orthonormalColumns)
@@ -272,6 +296,10 @@ public class Volume : Inventory<SpeciesPhaseResource>
 				continue;
 			}
 
+			if (VERBOSE)
+			{
+				GD.Print($"Selecting j = {j} ({viewSpecies[j].Species.Name}) with specificMu = {vec_specificMu[j]} as dominant species.");
+			}
 			selectedSpecies.Add(j);
 			orthonormalColumns.Add(residual / norm);
 			if (selectedSpecies.Count == a)
@@ -290,50 +318,23 @@ public class Volume : Inventory<SpeciesPhaseResource>
 				{
 					A_init[row, i] = view[i, j];
 				}
-				b_init[row] = initialMu[j] / (Constants.R * T);
+				b_init[row] = vec_mu[j] / (Constants.R * T);
 			}
 			vec_lambda = A_init.Solve(b_init);
 		}
 
-		// We need to declare these outside the loop
-		Vector<double> vec_mu = Vector<double>.Build.Dense(s);
-		Vector<double> vec_x;
-		Vector<double> vec_n;
-
-		// Moved out of the loop because I realized mu_j depends only on T and P, which are held constant during SolveReactions
-		
-		// `docs/chemistry/solver/opus_4_7.md`:
-		// mu_j is a non-linear function so there's no way to optimize it other than calling it for each species
-		// Calculate mu_j of every species
-		for (int j = 0; j < s; j++)
-		{
-			vec_mu[j] = viewSpecies[j].Getmu(T, P, 1.0);
-			// mu_j = chemical potential of species j
-			// Use the pure species chemical potential (mole fraction x_j = 1)
-		}
-
-		if (VERBOSE)
-		{
-			GD.Print($"vec_mu = [{string.Join(", ", vec_mu)}]");
-		}
-
 		for (int reactionStep = 0; reactionStep < Constants.MaxReactionSteps; reactionStep++)
 		{
-			if (VERBOSE)
-			{
-				GD.Print($"reactionStep = {reactionStep}");
-				GD.Print("Now with 67% fewer phases!");
-			}
-
 			// But the logic for x_j is the same for all species, and can be vectorized
 			// x_j = mole fraction of species j in its phase
-			Vector<double> log_x = -vec_mu / (Constants.R * T) + view.TransposeThisAndMultiply(vec_lambda);
+			log_x = -vec_mu / (Constants.R * T) + view.TransposeThisAndMultiply(vec_lambda);
 			// Clamp (8 -> 682 species causes e-300 to e300 values)
 			log_x = log_x.PointwiseMaximum(Constants.log_xMin).PointwiseMinimum(Constants.log_xMax);
 			vec_x = log_x.PointwiseExp();
 
 			if (VERBOSE)
 			{
+				GD.Print($"reactionStep = {reactionStep}");
 				GD.Print($"vec_lambda = [{string.Join(", ", vec_lambda)}]");
 				GD.Print($"vec_x = [{string.Join(", ", vec_x)}]");
 			}
@@ -456,14 +457,16 @@ public class Volume : Inventory<SpeciesPhaseResource>
 
 			// Early exit conditions
 			if (vec_H.PointwiseAbs().Maximum() < Constants.H_iTolerance
-				&& vec_Z.PointwiseAbs().Maximum() < Constants.Z_mTolerance)
+				&& (vec_Z - 1.0).PointwiseAbs().Maximum() < Constants.Z_mTolerance)
 			{
 				break;
 			}
 		}
 
 		// Get and apply += n_j
-		vec_x = (-vec_mu / (Constants.R * T) + view.TransposeThisAndMultiply(vec_lambda)).PointwiseExp();
+		log_x = -vec_mu / (Constants.R * T) + view.TransposeThisAndMultiply(vec_lambda);
+		log_x = log_x.PointwiseMaximum(Constants.log_xMin).PointwiseMinimum(Constants.log_xMax);
+		vec_x = log_x.PointwiseExp();
 		vec_n = Vector<double>.Build.Dense(s);
 		for (int j = 0; j < s; j++)
 		{
@@ -614,92 +617,91 @@ public class Volume : Inventory<SpeciesPhaseResource>
 						T,
 						0.0,
 						1.0
-					) - poyntingCorrection);
+					) + poyntingCorrection);
 				}
 			}
 
-			GD.Print($"Species {species.Name}: mus = [{string.Join(", ", mus)}], n = [{string.Join(", ", phaseResources.Select(r => r.n))}]");
+			if (VERBOSE)
+			{
+				GD.Print($"Species {species.Name}: mus = [{string.Join(", ", mus)}], n = [{string.Join(", ", phaseResources.Select(r => r.n))}]");
+			}
 
+			// Rewriting for the third time:
 			// Algorithm:
-			// Every frame, move Constants.PhaseDamping fraction of moles from the highest mu to the lowest mu
-			// If either src or dst is a gas, calculate P_sat and use n_sat as a bound on moles to move
-			// Otherwise, between condensed phases, mu does not change with partial pressure so move a fixed fraction
+			// Find the lowest mu. This is the dst
+			// All higher mus are srcs
+			// If src is gas, calculate P_sat, n_sat, and gas_wants_n
+			// Same if dst is gas
+			// Otherwise, between condensed phases, mu does not change with partial pressure, the solution accepts complete non-existence of a phase, so just move a fixed fraction of src
 
-			/*
-			int srcj = mus.IndexOf(mus.Max());
-			int dstj = mus.IndexOf(mus.Min());
-			SpeciesPhaseResource srcResource = phaseResources[srcj];
-			SpeciesPhaseResource dstResource = phaseResources[dstj];
-			if (srcResource == gasResource || dstResource == gasResource)
+			List<SpeciesPhaseResource> orderedPhaseResources = phaseResources.OrderBy(r => mus[phaseResources.IndexOf(r)]).ToList();
+			// Reattach mus
+			List<double> orderedMus = orderedPhaseResources.Select(r => mus[phaseResources.IndexOf(r)]).ToList();
+			SpeciesPhaseResource dstResource = orderedPhaseResources[0];
+			for (int srcj = 1; srcj < numPhases; srcj++)
 			{
-			*/
-			if (gasResource != null)
-			{
-				// Case 1: src or dst is gas
-				// Well actually the other path is broken so just select the mu with the largest absolute difference from gas
-				int gasj = phaseResources.IndexOf(gasResource);
-				double mu_gas = mus[gasj];
-				List<double> absDiffmus = new List<double>();
-				for (int j = 0; j < numPhases; j++)
+				SpeciesPhaseResource srcResource = orderedPhaseResources[srcj];
+				double n_to_move = 0.0;
+				if (srcResource == gasResource) // src is gas
 				{
-					absDiffmus.Add(Math.Abs(mus[j] - mu_gas));
-				}
-				int condj = absDiffmus.IndexOf(absDiffmus.Max());
-				//int condj = srcResource == gasResource ? dstj : srcj;
-				//int gasj = srcResource == gasResource ? srcj : dstj;
-				SpeciesPhaseResource condResource = phaseResources[condj];
-				// We used mu at current conditions to determine src and dst
-				// But the exact formula for P_sat requires mu at standard conditions
-				double[] mu_stds = new double[numPhases];
-				for (int j = 0; j < numPhases; j++)
-				{
-					mu_stds[j] = phaseResources[j].SpeciesPhase.Getmu(
-						Constants.NISTNormalTemperature,
+					double mu_std_gas = srcResource.SpeciesPhase.Getmu(
+						T,
 						Constants.bar,
 						1.0
 					);
+					double mu_std_cond = dstResource.SpeciesPhase.Getmu(
+						T,
+						Constants.bar,
+						1.0
+					);
+					double P_sat = Constants.bar * Math.Exp((mu_std_cond - mu_std_gas) / (Constants.R * T));
+					if (VERBOSE)
+					{
+						GD.Print($"{srcResource.SpeciesPhase.Phase} <-> {dstResource.SpeciesPhase.Phase}: P_sat = {P_sat}");
+					}
+					double V_gas = Math.Max(all_vec_V[0], Constants.V_mMin);
+					double n_gas_sat = P_sat * V_gas / (Constants.R * T);
+					double gas_wants_n = n_gas_sat - srcResource.n;
+					n_to_move = -gas_wants_n; // gas -> cond
 				}
-				double mu_std_cond = mu_stds[condj];
-				double mu_std_gas = mu_stds[gasj];
-				GD.Print($"mu_std_cond = {mu_std_cond}, mu_std_gas = {mu_std_gas}");
-				GD.Print($"n_cond = {condResource.n}, n_gas = {gasResource.n}");
-				double P_sat = Constants.bar * Math.Exp((mu_std_cond - mu_std_gas) / (Constants.R * T));
-				double V_gas = Math.Max(all_vec_V[0], Constants.V_mMin);
-				double n_gas_sat = P_sat * V_gas / (Constants.R * T);
-				double gas_wants_n = n_gas_sat - gasResource.n;
-				double n_to_move = 0.0;
-				GD.Print($"P_sat = {P_sat}, n_gas_sat = {n_gas_sat}, gas_wants_n = {gas_wants_n}");
-				if (gas_wants_n < 0.0)
+				else if (dstResource == gasResource) // The same calculations
 				{
-					// Case 1a: gas -> cond
-					n_to_move = -Math.Min(-gas_wants_n, gasResource.n);
+					double mu_std_gas = dstResource.SpeciesPhase.Getmu(
+						T,
+						Constants.bar,
+						1.0
+					);
+					double mu_std_cond = srcResource.SpeciesPhase.Getmu(
+						T,
+						Constants.bar,
+						1.0
+					);
+					double P_sat = Constants.bar * Math.Exp((mu_std_cond - mu_std_gas) / (Constants.R * T));
+					if (VERBOSE)
+					{
+						GD.Print($"{srcResource.SpeciesPhase.Phase} <-> {dstResource.SpeciesPhase.Phase}: P_sat = {P_sat}");
+					}
+					double V_gas = Math.Max(all_vec_V[0], Constants.V_mMin);
+					double n_gas_sat = P_sat * V_gas / (Constants.R * T);
+					double gas_wants_n = n_gas_sat - dstResource.n;
+					n_to_move = Math.Min(gas_wants_n, srcResource.n); // cond -> gas
 				}
-				else
+				else // cond -> cond
 				{
-					// Case 1b: cond -> gas
-					n_to_move = Math.Min(gas_wants_n, condResource.n);
+					n_to_move = srcResource.n;
 				}
 				if (n_to_move != 0.0)
 				{
 					n_to_move *= Constants.PhaseDamping;
-					GD.Print($"{condResource.SpeciesPhase.Phase} <-> Gas: moving {n_to_move} moles");
-					condResource.n -= n_to_move;
-					gasResource.n += n_to_move;
+					if (VERBOSE)
+					{
+						GD.Print($"{srcResource.SpeciesPhase.Phase} -> {dstResource.SpeciesPhase.Phase}: n_to_move = {n_to_move}");
+					}
+					srcResource.n -= n_to_move;
+					dstResource.n += n_to_move;
 				}
 			}
-			// This path is bugged right now
-			/*
-			else
-			{
-				// Case 2: cond -> cond
-				// Just move a fixed fraction of src
-				double n_to_move = srcResource.n * Constants.PhaseDamping;
-				GD.Print($"{srcResource.SpeciesPhase.Phase} <-> {dstResource.SpeciesPhase.Phase}: moving {n_to_move} moles");
-				srcResource.n -= n_to_move;
-				dstResource.n += n_to_move;
-			}
-			*/
-
+			
 			// If any real resources ended up below the minimum amount, remove them
 			// Backwards for
 			for (int j = realResources.Count - 1; j >= 0; j--)
@@ -739,8 +741,8 @@ public class Volume : Inventory<SpeciesPhaseResource>
 		SolveReactionsGas();
 		SolveUT();
 		SolveVP();
-		RebuildIndexes();
-		SolvePhases();
+		//RebuildIndexes();
+		//SolvePhases();
 	}
 
 	// Volume is a thermodynamic simulation, so putting things in the box requires work

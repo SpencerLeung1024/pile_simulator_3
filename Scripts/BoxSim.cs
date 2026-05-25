@@ -41,6 +41,7 @@ public partial class BoxSim : Node3D
 		{"Fe", "#5f5f5f"},
 		{"CH4", "#ff5f5f"},
 		{"H2O", "#7fbfff"},
+		{"CO", "#6f5f9f"},
 		{"CO2", "#7f7f7f"},
 		{"C2H5OH", "#7f5f3f"},
 		{"Fe2O3", "#ff9f7f"}
@@ -293,6 +294,7 @@ public partial class BoxSim : Node3D
 		_dumpDebugButton.Pressed += DumpDebug;
 
 		// Initial condition
+		
 		_volume.MaybeAdd(new SpeciesPhaseResource
 		{
 			SpeciesPhase = AllSpeciesPhases.nameToPhase["CH4"],
@@ -303,6 +305,7 @@ public partial class BoxSim : Node3D
 			SpeciesPhase = AllSpeciesPhases.nameToPhase["O2"],
 			n = 100
 		});
+		
 		/*
 		_volume.MaybeAdd(new SpeciesPhaseResource
 		{
@@ -323,6 +326,23 @@ public partial class BoxSim : Node3D
 		{
 			SpeciesPhase = AllSpeciesPhases.nameToPhase["C(gr)"],
 			n = 25
+		});
+		*/
+		/*
+		_volume.MaybeAdd(new SpeciesPhaseResource
+		{
+			SpeciesPhase = AllSpeciesPhases.nameToPhase["H2O"],
+			n = 100
+		});
+		_volume.MaybeAdd(new SpeciesPhaseResource
+		{
+			SpeciesPhase = AllSpeciesPhases.nameToPhase["H2O(L)"],
+			n = 100
+		});
+		_volume.MaybeAdd(new SpeciesPhaseResource
+		{
+			SpeciesPhase = AllSpeciesPhases.nameToPhase["H2O(cr)"],
+			n = 100
 		});
 		*/
 		_volume.AssignUAtTP(

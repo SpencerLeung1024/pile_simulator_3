@@ -1,3 +1,4 @@
+using Godot;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,6 +7,8 @@ using System.Text.RegularExpressions;
 
 public static class NASA9Loader
 {
+	const bool VERBOSE = false;
+
 	private class RawEntry
 	{
 		public string RawName;
@@ -69,6 +72,7 @@ public static class NASA9Loader
 			int numIntervals = int.Parse(headerLine.Substring(0, 2).Trim());
 
 			var elements = new Dictionary<Element, double>();
+			bool hasWeirdFormula = false;
 			double charge = 0;
 			for (int g = 0; g < 5; g++)
 			{
@@ -78,14 +82,16 @@ public static class NASA9Loader
 				string symbol = field.Substring(0, Math.Min(2, field.Length)).Trim();
 				if (symbol.Length == 0) continue;
 
+				// Some elements are called like "AL", "CL", "BA" instead of "Al", "Cl", "Ba"
+				// Fix case
+				if (symbol.Length > 1)
+					symbol = char.ToUpper(symbol[0]) + symbol.Substring(1).ToLower();
+
 				string countStr = field.Length > 2 ? field.Substring(2).Trim() : "";
 				if (countStr.Length == 0) continue;
 
 				if (!double.TryParse(countStr, out double count)) continue;
 				if (count == 0) continue;
-
-				if (symbol.StartsWith("I") && symbol.Length > 1)
-					symbol = symbol.Substring(1);
 
 				if (symbol == "E")
 				{
@@ -95,6 +101,21 @@ public static class NASA9Loader
 
 				if (Elements.symbolToElement.TryGetValue(symbol, out var element))
 					elements[element] = count;
+				else
+				{
+					// This skips
+					// C6D5\,phenyl, C6D6, D, D+, D-, DBr, DCL, DF, DOCL, DO2, DO2-, D2, D2+, D2-, D2O, D2O2, D2S, HD, HD+, HDO, HDO2, ND, ND2, ND3, N2D2\,cis, OD, OD-, SD
+					if (VERBOSE)
+						GD.Print($"Unknown element symbol '{symbol}' in {name}, skipping");
+					hasWeirdFormula = true;
+					break;
+				}
+			}
+			if (hasWeirdFormula)
+			{
+				i--; // We advanced 2 lines, so we need to go 1 line back
+				SkipEntry(lines, ref i);
+				continue;
 			}
 
 			int phaseCode = 0;
@@ -181,8 +202,11 @@ public static class NASA9Loader
 	private static void BuildSpecies(List<RawEntry> entries, List<string> subset)
 	{
 		var entriesBySpecies = entries
-			.Where(e => e.Elements.Count > 0 && e.Elements.Values.All(v => Math.Abs(v - Math.Round(v)) < 0.01))
-			.GroupBy(e => GetBaseName(e.RawName) + "|" + e.Charge.ToString("F1"))
+			//.Where(e => e.Elements.Count > 0 && e.Elements.Values.All(v => Math.Abs(v - Math.Round(v)) < 0.01))
+			//.GroupBy(e => GetBaseName(e.RawName) + "|" + e.Charge.ToString("F1"))
+			// 2026-05-24: Pile Simulator 3 has no mechanism to ensure conservation of charge. Ignore charged species for now
+			.Where(e => e.Charge == 0)
+			.GroupBy(e => GetBaseName(e.RawName))
 			.ToList();
 
 		foreach (var group in entriesBySpecies)
@@ -191,13 +215,24 @@ public static class NASA9Loader
 			var first = entriesInGroup[0];
 
 			var formula = new Dictionary<Element, uint>();
+			bool hasWeirdFormula = false;
 			foreach (var kv in first.Elements)
 			{
 				uint count = (uint)Math.Round(kv.Value);
 				if (Math.Abs(count - kv.Value) > 0.01)
-					throw new Exception($"Non-integer element count for {kv.Key.Symbol} in {first.RawName}: {kv.Value}");
+				{
+					//throw new Exception($"Non-integer element count for {kv.Key.Symbol} in {first.RawName}: {kv.Value}");
+					// line 12239: Fe.947O(cr)       Wustite.
+					// This is the only case in thermo.inp
+					if (VERBOSE)
+						GD.Print($"{kv.Key.Symbol} has non-integer count {kv.Value} in {first.RawName}, skipping");
+					hasWeirdFormula = true;
+					break;
+				}
 				formula[kv.Key] = count;
 			}
+			if (hasWeirdFormula)
+				continue;
 
 			string baseName = GetBaseName(first.RawName);
 			if (first.Charge != 0)
@@ -216,7 +251,7 @@ public static class NASA9Loader
 			var phases = new List<SpeciesPhase>();
 			foreach (var entry in entriesInGroup)
 			{
-		Phase phase = PhaseFromCode(entry.PhaseCode, entry.Comment, entry.RawName);
+				Phase phase = PhaseFromCode(entry.PhaseCode, entry.Comment, entry.RawName);
 
 				var bounds = new List<double>();
 				foreach (var interval in entry.Intervals)
@@ -244,6 +279,9 @@ public static class NASA9Loader
 					EquationOfState = null
 				};
 				phases.Add(sp);
+
+				AllSpeciesPhases.list.Add(sp);
+				AllSpeciesPhases.nameToPhase[entry.RawName] = sp;
 			}
 
 			var species = new Species(baseName, formula, 0.0, phases);
@@ -252,23 +290,15 @@ public static class NASA9Loader
 
 			AllSpecies.list.Add(species);
 			AllSpecies.nameToSpecies[baseName] = species;
-
-			foreach (var entry in entriesInGroup)
-			{
-				var matchingPhase = phases.FirstOrDefault(sp =>
-					sp.Phase == PhaseFromCode(entry.PhaseCode, entry.Comment, entry.RawName));
-
-				if (matchingPhase != null)
-				{
-					AllSpeciesPhases.list.Add(matchingPhase);
-					AllSpeciesPhases.nameToPhase[entry.RawName] = matchingPhase;
-				}
-			}
 		}
 	}
 
 	private static Phase PhaseFromCode(int phaseCode, string comment, string rawName)
 	{
+		// thermo.inp uses 0 = gas and 1+ = condensed
+		// There is no consistency between what 1+ is. Liquid can be 1, 2, or something else
+		// Trust that all interesting liquids have "liquid" somewhere in the comment and that everything else is solid
+
 		if (phaseCode == 0)
 			return Phase.Gas;
 

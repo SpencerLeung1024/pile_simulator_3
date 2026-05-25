@@ -201,7 +201,11 @@ public class Constants
     public const double MaxDeltaP = 1e5; // Pa, maximum Newton step in SolveVP (damping)
     
     // SolvePhases
-    public const double PhaseDamping = 0.5; // fraction, how aggressively to move toward fugacity equilibrium in SolvePhases
+    public const double PhaseDamping = 0.1; // fraction, how aggressively to move toward equilibrium in SolvePhases
+    // Originally 0.5 but it caused weird oscillations
+    // The cause was that as liquid water evaporates, it cools down the system
+    // This dramatically reduces T and P_sat, so all the gaseous water condenses on the next frame
+    // Stationeers uses 0.1 in its code apparently. Sadly no improvement here
 
     // Unscientific
     
