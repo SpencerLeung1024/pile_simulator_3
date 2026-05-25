@@ -1,5 +1,12 @@
 # Log
 
+## 2026-05-25: Finally matches CEA
+- 6% CH4, 30% CO, 1% CO2, 57% H2, 5% H2O at 1400 K and 6.2 MPa
+- As long as you pin CH4 as a dominant species and disable phase change it should converge
+- Reactions are gas-only; you need SolvePhases to work properly to make condensed species appear
+- That means you cannot make a condensed species for which no gas variant exists
+- The full thermo.inp is now enabled. It generates HCO species. If you add any species the solver doesn't converge though
+
 ## 2026-05-23: Gaseous carbon?
 - DeepSeek V4 Pro and GPT-5.5 tried to stabilize the solver
 - In the end, I couldn't get the solver to accept liquids or solids

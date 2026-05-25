@@ -91,7 +91,7 @@ anchor_right = 1.0
 offset_left = -310.0
 offset_top = 10.0
 offset_right = -10.0
-offset_bottom = 125.0
+offset_bottom = 580.0
 grow_horizontal = 0
 bbcode_enabled = true
 text = "[color=#ffffff]O2[/color]
@@ -99,7 +99,6 @@ gas: 203 mol, 1.72 kg, 807 L
 [color=#7fbfff]H2O[/color]
 gas: 13.7 mol, 196 g, 113 L
 liquid: 1.23 kmol, 83.7 kg, 19.2 L"
-fit_content = true
 
 [node name="HBoxBottom" type="HBoxContainer" parent="UI" unique_id=426755865]
 layout_mode = 1
