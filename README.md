@@ -18,6 +18,6 @@ A chemistry simulation of incomplete combustion of methane.
 
 There is functionality to add chemical species but it immediately throws off the solver.
 
-![CO + H2](Images/boxsim.png)
+![CO + H2](IMAGES/boxsim.png)
 
 ![Ave μ_jica](IMAGES/chemical_potential.png)
